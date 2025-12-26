@@ -1,0 +1,231 @@
+generator client {
+  provider = "prisma-client-js"
+}
+
+datasource db {
+  provider = "postgresql"
+}
+
+model User {
+  id                String  @id @default(uuid())
+  email             String? @unique
+  phone             String  @unique
+  passwordHash      String
+  isActive          Boolean @default(true)
+  applicantVerified Boolean @default(false)
+
+  failedLoginCount Int       @default(0)
+  lockUntil        DateTime?
+  tokenVersion     Int       @default(0)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  userRoles      UserRole[]
+  refreshTokens  RefreshToken[]
+  passwordResets PasswordResetToken[]
+  auditLogs      AuditLog[]           @relation("AuditPerformedBy")
+
+  applicantProfile ApplicantProfile?
+}
+
+model Role {
+  id          String   @id @default(uuid())
+  name        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+  userRoles       UserRole[]
+}
+
+model Permission {
+  id          String   @id @default(uuid())
+  code        String   @unique
+  description String?
+  createdAt   DateTime @default(now())
+  updatedAt   DateTime @updatedAt
+
+  rolePermissions RolePermission[]
+}
+
+model RolePermission {
+  roleId       String
+  permissionId String
+  createdAt    DateTime @default(now())
+
+  role       Role       @relation(fields: [roleId], references: [id], onDelete: Cascade)
+  permission Permission @relation(fields: [permissionId], references: [id], onDelete: Cascade)
+
+  @@id([roleId, permissionId])
+}
+
+model UserRole {
+  userId    String
+  roleId    String
+  createdAt DateTime @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+  role Role @relation(fields: [roleId], references: [id], onDelete: Cascade)
+
+  @@id([userId, roleId])
+}
+
+model RefreshToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String
+  jti       String    @unique
+  expiresAt DateTime
+  revokedAt DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model PasswordResetToken {
+  id        String    @id @default(uuid())
+  userId    String
+  tokenHash String    @unique
+  expiresAt DateTime
+  usedAt    DateTime?
+  createdAt DateTime  @default(now())
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([expiresAt])
+}
+
+model AuditLog {
+  id          String   @id @default(uuid())
+  performedBy String?
+  action      String
+  entityType  String?
+  entityId    String?
+  ipAddress   String?
+  userAgent   String?
+  meta        Json?
+  createdAt   DateTime @default(now())
+
+  performer User? @relation("AuditPerformedBy", fields: [performedBy], references: [id], onDelete: SetNull)
+
+  @@index([performedBy])
+  @@index([createdAt])
+  @@index([action])
+}
+
+enum ApplicantProfileStatus {
+  DRAFT
+  SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+model ApplicantProfile {
+  applicantId String  @id @default(uuid())
+  userId      String? @unique
+
+  firstName      String?
+  lastName       String?
+  gender         String?
+  dateOfBirth    DateTime?
+  nationality    String?
+  passportNumber String?
+  phone          String
+  email          String?
+  address        String?
+  maritalStatus  String?
+
+  profileStatus ApplicantProfileStatus @default(DRAFT)
+
+  rejectionReason String?
+  verifiedBy      String?
+  verifiedAt      DateTime?
+  submittedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  skills          ApplicantSkill[]
+  qualifications  ApplicantQualification[]
+  workExperiences ApplicantWorkExperience[]
+  documents       ApplicantDocument[]
+
+  @@unique([passportNumber])
+  @@index([phone])
+  @@index([email])
+  @@index([profileStatus])
+}
+
+model ApplicantSkill {
+  id                String  @id @default(uuid())
+  applicantId       String
+  skillName         String
+  proficiencyLevel  String?
+  yearsOfExperience Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+
+  @@unique([applicantId, skillName])
+  @@index([applicantId])
+}
+
+model ApplicantQualification {
+  id                String  @id @default(uuid())
+  applicantId       String
+  qualificationType String
+  institution       String?
+  country           String?
+  yearCompleted     Int?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+
+  @@index([applicantId])
+}
+
+model ApplicantWorkExperience {
+  id               String    @id @default(uuid())
+  applicantId      String
+  jobTitle         String
+  employerName     String?
+  country          String?
+  startDate        DateTime?
+  endDate          DateTime?
+  responsibilities String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+
+  @@index([applicantId])
+}
+
+model ApplicantDocument {
+  id                 String  @id @default(uuid())
+  applicantId        String
+  documentType       String
+  fileUrl            String
+  verificationStatus String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+
+  @@index([applicantId])
+  @@index([documentType])
+}
