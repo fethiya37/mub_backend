@@ -18,8 +18,16 @@ async function bootstrap() {
     .setTitle(process.env.APP_NAME ?? 'MUB Foreign Employment Agent System')
     .setDescription('MUB Foreign Employment Agent System API')
     .setVersion('1.0.0')
-    .addBearerAuth()
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'bearer'
+    )
+    .addApiKey(
+      { type: 'apiKey', name: 'X-Draft-Token', in: 'header', description: 'Raw draft token value' },
+      'draft'
+    )
     .build();
+
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);

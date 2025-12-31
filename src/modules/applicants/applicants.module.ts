@@ -1,35 +1,34 @@
 import { Module } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
+import { UsersModule } from '../users/users.module';
+import { AuthModule } from '../auth/auth.module';
 import { PublicApplicantsController } from './presentation/public-applicants.controller';
 import { AdminApplicantsController } from './presentation/admin-applicants.controller';
-import { ApplicantsController } from './presentation/applicants.controller';
-import { ApplicantsService } from './services/applicants.service';
-import { ApplicantStatusService } from './services/applicant-status.service';
-import { ApplicantVerificationService } from './services/applicant-verification.service';
+import { ApplicantProfileController } from './presentation/applicant-profile.controller';
 import { ApplicantProfileRepository } from './repositories/applicant-profile.repository';
-import { ApplicantSkillRepository } from './repositories/applicant-skill.repository';
-import { ApplicantQualificationRepository } from './repositories/applicant-qualification.repository';
-import { ApplicantWorkExperienceRepository } from './repositories/applicant-work-experience.repository';
-import { ApplicantDocumentRepository } from './repositories/applicant-document.repository';
+import { ApplicantDraftTokenRepository } from './repositories/applicant-draft-token.repository';
 import { ApplicantProfilePrismaRepository } from './prisma/applicant-profile.prisma-repository';
-import { ApplicantSkillPrismaRepository } from './prisma/applicant-skill.prisma-repository';
-import { ApplicantQualificationPrismaRepository } from './prisma/applicant-qualification.prisma-repository';
-import { ApplicantWorkExperiencePrismaRepository } from './prisma/applicant-work-experience.prisma-repository';
-import { ApplicantDocumentPrismaRepository } from './prisma/applicant-document.prisma-repository';
-import { UsersModule } from '../users/users.module';
-import { AuditModule } from '../audit/audit.module';
+import { ApplicantDraftTokenPrismaRepository } from './prisma/applicant-draft-token.prisma-repository';
+import { ApplicantStatusService } from './services/applicant-status.service';
+import { ApplicantDraftTokenService } from './services/applicant-draft-token.service';
+import { ApplicantsService } from './services/applicants.service';
+import { ApplicantReviewService } from './services/applicant-review.service';
+import { ApplicantVerifiedService } from './services/applicant-verified.service';
+import { DraftTokenGuard } from './guards/draft-token.guard';
 
 @Module({
-  imports: [UsersModule, AuditModule],
-  controllers: [PublicApplicantsController, AdminApplicantsController, ApplicantsController],
+  imports: [UsersModule, AuthModule],
+  controllers: [PublicApplicantsController, AdminApplicantsController, ApplicantProfileController],
   providers: [
-    ApplicantsService,
+    PrismaService,
     ApplicantStatusService,
-    ApplicantVerificationService,
+    ApplicantDraftTokenService,
+    ApplicantsService,
+    ApplicantReviewService,
+    ApplicantVerifiedService,
+    DraftTokenGuard,
     { provide: ApplicantProfileRepository, useClass: ApplicantProfilePrismaRepository },
-    { provide: ApplicantSkillRepository, useClass: ApplicantSkillPrismaRepository },
-    { provide: ApplicantQualificationRepository, useClass: ApplicantQualificationPrismaRepository },
-    { provide: ApplicantWorkExperienceRepository, useClass: ApplicantWorkExperiencePrismaRepository },
-    { provide: ApplicantDocumentRepository, useClass: ApplicantDocumentPrismaRepository }
+    { provide: ApplicantDraftTokenRepository, useClass: ApplicantDraftTokenPrismaRepository }
   ],
   exports: [ApplicantsService]
 })

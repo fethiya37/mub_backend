@@ -1,194 +1,161 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
 import { ApplicantProfileRepository } from '../repositories/applicant-profile.repository';
-import { ApplicantSkillRepository } from '../repositories/applicant-skill.repository';
-import { ApplicantQualificationRepository } from '../repositories/applicant-qualification.repository';
-import { ApplicantWorkExperienceRepository } from '../repositories/applicant-work-experience.repository';
-import { ApplicantDocumentRepository } from '../repositories/applicant-document.repository';
 import { ApplicantStatusService } from './applicant-status.service';
-import { AuditService } from '../../audit/services/audit.service';
+import { ApplicantDraftTokenService } from './applicant-draft-token.service';
 
 @Injectable()
 export class ApplicantsService {
   constructor(
     private readonly profiles: ApplicantProfileRepository,
-    private readonly skills: ApplicantSkillRepository,
-    private readonly qualifications: ApplicantQualificationRepository,
-    private readonly experiences: ApplicantWorkExperienceRepository,
-    private readonly documents: ApplicantDocumentRepository,
     private readonly status: ApplicantStatusService,
-    private readonly audit: AuditService
-  ) { }
+    private readonly draftTokens: ApplicantDraftTokenService
+  ) {}
 
-  async createProfile(input: any, performedBy?: string | null) {
-    const existing = await this.profiles.findByPhone(input.phone);
-    if (existing) throw new ConflictException('Applicant phone already exists');
+  async draftUpsert(dto: any) {
+    const existing = await this.profiles.findByPhone(dto.phone);
+    if (existing) this.status.ensureDraftEditable(existing.profileStatus);
 
-    const profile = await this.profiles.create({
-      phone: input.phone,
-      email: input.email ?? null,
-      firstName: input.firstName ?? null,
-      lastName: input.lastName ?? null,
-      gender: input.gender ?? null,
-      dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : null,
-      nationality: input.nationality ?? null,
-      passportNumber: input.passportNumber ?? null,
-      address: input.address ?? null,
-      maritalStatus: input.maritalStatus ?? null
+    this.draftTokens.parseLaborId(dto.gender ?? null, dto.laborId ?? null);
+
+    const passportExpiry = dto.passportExpiry ? new Date(dto.passportExpiry) : null;
+    this.draftTokens.ensurePassportExpiry(passportExpiry);
+
+    const profile = await this.profiles.upsertDraft({
+      phone: dto.phone,
+      email: dto.email ?? null,
+
+      firstName: dto.firstName ?? null,
+      lastName: dto.lastName ?? null,
+      gender: dto.gender ?? null,
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+      nationality: dto.nationality ?? null,
+      region: dto.region ?? null,
+
+      passportNumber: dto.passportNumber ?? null,
+      passportExpiry,
+      laborId: dto.laborId ?? null,
+
+      address: dto.address ?? null,
+      maritalStatus: dto.maritalStatus ?? null,
+
+      visaNumber: dto.visaNumber ?? null,
+      applicationNumber: dto.applicationNumber ?? null,
+      barcodeValue: dto.barcodeValue ?? null,
+
+      skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
+      qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
+      workExperiences: dto.workExperiences
+        ? dto.workExperiences.map((w: any) => ({
+            ...w,
+            startDate: w.startDate ? new Date(w.startDate) : null,
+            endDate: w.endDate ? new Date(w.endDate) : null
+          }))
+        : undefined,
+      documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
     });
 
-    await this.audit.log({
-      performedBy: performedBy ?? null,
-      action: 'APPLICANT_PROFILE_CREATED',
-      entityType: 'ApplicantProfile',
-      entityId: profile.applicantId
-    });
-
-    return profile;
+    const token = await this.draftTokens.rotate(profile.applicantId);
+    return { applicantId: profile.applicantId, ...token };
   }
 
-  async getProfile(applicantId: string) {
+  async issueDraftToken(phone: string, passportNumber?: string) {
+    const profile = await this.profiles.findByPhone(phone);
+    if (!profile) throw new BadRequestException('Applicant not found');
+    this.status.ensureDraftEditable(profile.profileStatus);
+
+    if (passportNumber) {
+      const match = (profile.passportNumber ?? '').trim() === passportNumber.trim();
+      if (!match) throw new ConflictException('Passport number mismatch');
+    }
+
+    const token = await this.draftTokens.rotate(profile.applicantId);
+    return { applicantId: profile.applicantId, ...token };
+  }
+
+  async getDraft(applicantId: string) {
     const profile = await this.profiles.findById(applicantId);
-    if (!profile) throw new NotFoundException('Applicant profile not found');
+    if (!profile) throw new BadRequestException('Applicant not found');
+    this.status.ensureDraftEditable(profile.profileStatus);
     return profile;
   }
 
-  async updateProfile(applicantId: string, input: any, performedBy?: string | null) {
-    const profile = await this.getProfile(applicantId);
-    this.status.ensureCanUpdateProfile(profile.profileStatus);
+  async draftUpdate(applicantId: string, dto: any) {
+    const profile = await this.profiles.findById(applicantId);
+    if (!profile) throw new BadRequestException('Applicant not found');
+    this.status.ensureDraftEditable(profile.profileStatus);
 
-    const updated = await this.profiles.update(applicantId, {
-      firstName: input.firstName ?? undefined,
-      lastName: input.lastName ?? undefined,
-      gender: input.gender ?? undefined,
-      dateOfBirth: input.dateOfBirth ? new Date(input.dateOfBirth) : undefined,
-      nationality: input.nationality ?? undefined,
-      passportNumber: input.passportNumber ?? undefined,
-      phone: input.phone ?? undefined,
-      email: input.email ?? undefined,
-      address: input.address ?? undefined,
-      maritalStatus: input.maritalStatus ?? undefined
-    });
+    const merged = {
+      phone: profile.phone,
+      email: dto.email ?? profile.email,
 
-    await this.audit.log({
-      performedBy: performedBy ?? null,
-      action: 'APPLICANT_PROFILE_UPDATED',
-      entityType: 'ApplicantProfile',
-      entityId: applicantId
-    });
+      firstName: dto.firstName ?? profile.firstName,
+      lastName: dto.lastName ?? profile.lastName,
+      gender: dto.gender ?? profile.gender,
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : profile.dateOfBirth,
+      nationality: dto.nationality ?? profile.nationality,
+      region: dto.region ?? profile.region,
 
-    return updated;
+      passportNumber: dto.passportNumber ?? profile.passportNumber,
+      passportExpiry: dto.passportExpiry ? new Date(dto.passportExpiry) : profile.passportExpiry,
+      laborId: dto.laborId ?? profile.laborId,
+
+      address: dto.address ?? profile.address,
+      maritalStatus: dto.maritalStatus ?? profile.maritalStatus,
+
+      visaNumber: dto.visaNumber ?? profile.visaNumber,
+      applicationNumber: dto.applicationNumber ?? profile.applicationNumber,
+      barcodeValue: dto.barcodeValue ?? profile.barcodeValue,
+
+      skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
+      qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
+      workExperiences: dto.workExperiences
+        ? dto.workExperiences.map((w: any) => ({
+            ...w,
+            startDate: w.startDate ? new Date(w.startDate) : null,
+            endDate: w.endDate ? new Date(w.endDate) : null
+          }))
+        : undefined,
+      documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
+    };
+
+    this.draftTokens.parseLaborId(merged.gender ?? null, merged.laborId ?? null);
+    this.draftTokens.ensurePassportExpiry(merged.passportExpiry ?? null);
+
+    await this.profiles.upsertDraft(merged as any);
+
+    const token = await this.draftTokens.rotate(applicantId);
+    return { ok: true, ...token };
   }
 
-  async submit(applicantId: string, performedBy?: string | null) {
-    const profile = await this.getProfile(applicantId);
+  async submit(applicantId: string, draftTokenRecordId: string) {
+    const profile = await this.profiles.findById(applicantId);
+    if (!profile) throw new BadRequestException('Applicant not found');
     this.status.ensureCanSubmit(profile.profileStatus);
 
-    const requiredMissing =
+    const missingProfile =
       !profile.firstName ||
       !profile.lastName ||
-      !profile.passportNumber ||
+      !profile.gender ||
+      !profile.region ||
       !profile.nationality ||
+      !profile.passportNumber ||
+      !profile.passportExpiry ||
+      !profile.laborId ||
       !profile.phone;
 
-    if (requiredMissing) throw new BadRequestException('Profile missing required fields');
+    if (missingProfile) throw new BadRequestException('Missing required profile fields');
 
-    const updated = await this.profiles.update(applicantId, {
-      profileStatus: 'SUBMITTED',
-      submittedAt: new Date(),
-      rejectionReason: null
-    });
+    this.draftTokens.parseLaborId(profile.gender ?? null, profile.laborId ?? null);
+    this.draftTokens.ensurePassportExpiry(profile.passportExpiry ?? null);
 
-    await this.audit.log({
-      performedBy: performedBy ?? null,
-      action: 'APPLICANT_PROFILE_SUBMITTED',
-      entityType: 'ApplicantProfile',
-      entityId: applicantId
-    });
+    const docTypes = new Set((profile.documents ?? []).map((d: any) => d.documentType));
+    const requiredDocs = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE', 'LABOR_ID'];
+    const missingDocs = requiredDocs.filter((t) => !docTypes.has(t));
+    if (missingDocs.length) throw new BadRequestException(`Missing required documents: ${missingDocs.join(', ')}`);
 
-    return updated;
-  }
+    await this.profiles.setStatus(applicantId, 'SUBMITTED', { submittedAt: new Date(), rejectionReason: null });
+    await this.draftTokens.markUsed(draftTokenRecordId);
 
-  async reject(applicantId: string, reason: string, performedBy: string) {
-    const profile = await this.getProfile(applicantId);
-    this.status.ensureCanVerifyOrReject(profile.profileStatus);
-
-    const updated = await this.profiles.update(applicantId, {
-      profileStatus: 'REJECTED',
-      rejectionReason: reason,
-      verifiedBy: null,
-      verifiedAt: null
-    });
-
-    await this.audit.log({
-      performedBy,
-      action: 'APPLICANT_PROFILE_REJECTED',
-      entityType: 'ApplicantProfile',
-      entityId: applicantId,
-      meta: { reason }
-    });
-
-    return updated;
-  }
-
-  async listByStatus(status?: string, page = 1, pageSize = 50) {
-    if (!status) return this.profiles.listAll(page, pageSize);
-    return this.profiles.listByStatus(status, page, pageSize);
-  }
-
-
-  addSkill(applicantId: string, dto: any) {
-    return this.skills.add(applicantId, dto);
-  }
-
-  updateSkill(skillId: string, dto: any) {
-    return this.skills.update(skillId, dto);
-  }
-
-  removeSkill(skillId: string) {
-    return this.skills.remove(skillId);
-  }
-
-  addQualification(applicantId: string, dto: any) {
-    return this.qualifications.add(applicantId, dto);
-  }
-
-  updateQualification(id: string, dto: any) {
-    return this.qualifications.update(id, dto);
-  }
-
-  removeQualification(id: string) {
-    return this.qualifications.remove(id);
-  }
-
-  addWorkExperience(applicantId: string, dto: any) {
-    return this.experiences.add(applicantId, {
-      ...dto,
-      startDate: dto.startDate ? new Date(dto.startDate) : null,
-      endDate: dto.endDate ? new Date(dto.endDate) : null
-    });
-  }
-
-  updateWorkExperience(id: string, dto: any) {
-    return this.experiences.update(id, {
-      ...dto,
-      startDate: dto.startDate ? new Date(dto.startDate) : undefined,
-      endDate: dto.endDate ? new Date(dto.endDate) : undefined
-    });
-  }
-
-  removeWorkExperience(id: string) {
-    return this.experiences.remove(id);
-  }
-
-  addDocument(applicantId: string, dto: any) {
-    return this.documents.add(applicantId, dto);
-  }
-
-  updateDocument(id: string, dto: any) {
-    return this.documents.update(id, dto);
-  }
-
-  removeDocument(id: string) {
-    return this.documents.remove(id);
+    return { ok: true, applicantId };
   }
 }

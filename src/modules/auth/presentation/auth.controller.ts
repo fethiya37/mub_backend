@@ -7,6 +7,8 @@ import { RefreshDto } from '../dto/refresh.dto';
 import { ForgotPasswordDto } from '../dto/forgot-password.dto';
 import { ResetPasswordDto } from '../dto/reset-password.dto';
 import { ChangePasswordDto } from '../dto/change-password.dto';
+import { RequestEmailVerificationDto } from '../dto/request-email-verification.dto';
+import { VerifyEmailDto } from '../dto/verify-email.dto';
 import { AuthService } from '../services/auth.service';
 import { CurrentUserDecorator } from '../../../common/decorators/current-user.decorator';
 import type { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -14,26 +16,11 @@ import type { CurrentUser } from '../../../common/decorators/current-user.decora
 @ApiTags('Auth')
 @Controller('api/auth')
 export class AuthController {
-  constructor(private readonly auth: AuthService) { }
+  constructor(private readonly auth: AuthService) {}
 
   @Public()
   @Post('login')
   @ApiOperation({ summary: 'Login with phone or email + password' })
-  @ApiResponse({
-    status: 201,
-    description: 'Tokens',
-    schema: {
-      example: {
-        accessToken: 'jwt',
-        refreshToken: 'jti.token',
-        expiresInSeconds: 900,
-        roles: ['ADMIN'],
-        permissions: ['USER_MANAGE'],
-        applicantVerified: true
-      }
-    }
-  })
-  @ApiResponse({ status: 401, description: 'Invalid credentials / locked / deactivated' })
   login(@Body() dto: LoginDto, @Req() req: Request) {
     return this.auth.login(dto, { ip: req.ip, ua: req.headers['user-agent'] as string });
   }
@@ -41,20 +28,14 @@ export class AuthController {
   @Public()
   @Post('refresh')
   @ApiOperation({ summary: 'Refresh access token (rotates refresh token)' })
-  @ApiResponse({
-    status: 201,
-    description: 'New tokens',
-    schema: { example: { accessToken: 'jwt', refreshToken: 'jti.token', expiresInSeconds: 900 } }
-  })
-  @ApiResponse({ status: 401, description: 'Invalid/expired refresh token' })
   refresh(@Body() dto: RefreshDto) {
     return this.auth.refresh(dto);
   }
 
   @Public()
   @Post('forgot-password')
-  @ApiOperation({ summary: 'Request password reset (returns token for now)' })
-  @ApiResponse({ status: 201, description: 'OK', schema: { example: { ok: true, token: 'raw_token' } } })
+  @ApiOperation({ summary: 'Request password reset (email only)' })
+  @ApiResponse({ status: 201, schema: { example: { ok: true } } })
   forgotPassword(@Body() dto: ForgotPasswordDto) {
     return this.auth.forgotPassword(dto);
   }
@@ -62,17 +43,27 @@ export class AuthController {
   @Public()
   @Post('reset-password')
   @ApiOperation({ summary: 'Reset password using token' })
-  @ApiResponse({ status: 201, description: 'OK', schema: { example: { ok: true } } })
-  @ApiResponse({ status: 400, description: 'Invalid/expired/used token' })
   resetPassword(@Body() dto: ResetPasswordDto) {
     return this.auth.resetPassword(dto);
+  }
+
+  @Public()
+  @Post('request-email-verification')
+  @ApiOperation({ summary: 'Request email verification link (email only)' })
+  requestEmailVerification(@Body() dto: RequestEmailVerificationDto) {
+    return this.auth.requestEmailVerification(dto);
+  }
+
+  @Public()
+  @Post('verify-email')
+  @ApiOperation({ summary: 'Verify email using token' })
+  verifyEmail(@Body() dto: VerifyEmailDto) {
+    return this.auth.verifyEmail(dto);
   }
 
   @ApiBearerAuth()
   @Post('change-password')
   @ApiOperation({ summary: 'Change password (requires auth)' })
-  @ApiResponse({ status: 201, description: 'OK', schema: { example: { ok: true } } })
-  @ApiResponse({ status: 401, description: 'Unauthorized/Invalid credentials' })
   changePassword(@CurrentUserDecorator() user: CurrentUser, @Body() dto: ChangePasswordDto) {
     return this.auth.changePassword(user.userId, dto);
   }
@@ -80,7 +71,6 @@ export class AuthController {
   @ApiBearerAuth()
   @Post('logout')
   @ApiOperation({ summary: 'Logout (revoke all refresh tokens)' })
-  @ApiResponse({ status: 201, description: 'OK', schema: { example: { ok: true } } })
   logout(@CurrentUserDecorator() user: CurrentUser) {
     return this.auth.logout(user.userId);
   }
@@ -88,22 +78,6 @@ export class AuthController {
   @ApiBearerAuth()
   @Get('me')
   @ApiOperation({ summary: 'Get current user claim payload' })
-  @ApiResponse({
-    status: 200,
-    description: 'Current user',
-    schema: {
-      example: {
-        userId: 'uuid',
-        email: 'admin@mub.local',
-        phone: '+251900000000',
-        roles: ['ADMIN'],
-        permissions: ['USER_MANAGE'],
-        isActive: true,
-        applicantVerified: true,
-        tokenVersion: 0
-      }
-    }
-  })
   me(@CurrentUserDecorator() user: CurrentUser) {
     return user;
   }

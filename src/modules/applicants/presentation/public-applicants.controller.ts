@@ -1,18 +1,11 @@
-import { Body, Controller, Delete, Get, Param, Patch, Post, Put } from '@nestjs/common';
-import { ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Post, Put, Req, UseGuards } from '@nestjs/common';
+import { ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
 import { Public } from '../../../common/decorators/public.decorator';
+import { DraftUpsertApplicantDto } from '../dto/public/draft-upsert-applicant.dto';
+import { SubmitApplicantDto } from '../dto/public/submit-applicant.dto';
+import { IssueDraftTokenDto } from '../dto/public/issue-draft-token.dto';
 import { ApplicantsService } from '../services/applicants.service';
-import { CreateApplicantProfileDto } from '../dto/create-applicant-profile.dto';
-import { UpdateApplicantProfileDto } from '../dto/update-applicant-profile.dto';
-import { SubmitApplicantProfileDto } from '../dto/submit-applicant-profile.dto';
-import { AddSkillDto } from '../dto/add-skill.dto';
-import { UpdateSkillDto } from '../dto/update-skill.dto';
-import { AddQualificationDto } from '../dto/add-qualification.dto';
-import { UpdateQualificationDto } from '../dto/update-qualification.dto';
-import { AddWorkExperienceDto } from '../dto/add-work-experience.dto';
-import { UpdateWorkExperienceDto } from '../dto/update-work-experience.dto';
-import { AddDocumentDto } from '../dto/add-document.dto';
-import { UpdateDocumentDto } from '../dto/update-document.dto';
+import { DraftTokenGuard } from '../guards/draft-token.guard';
 
 @ApiTags('Public Applicants')
 @Public()
@@ -20,100 +13,49 @@ import { UpdateDocumentDto } from '../dto/update-document.dto';
 export class PublicApplicantsController {
   constructor(private readonly applicants: ApplicantsService) {}
 
-  @Post('profile')
-  @ApiOperation({ summary: 'Create applicant profile (DRAFT) without user' })
-  @ApiResponse({ status: 201 })
-  create(@Body() dto: CreateApplicantProfileDto) {
-    return this.applicants.createProfile(dto, null);
+  @Put('draft')
+  @ApiOperation({ summary: 'Create or update draft profile (nested arrays allowed) and rotate Draft token' })
+  @ApiResponse({
+    status: 200,
+    schema: {
+      example: {
+        applicantId: 'uuid',
+        draftToken: 'token',
+        draftTokenExpiresAt: '2025-12-31T00:00:00.000Z'
+      }
+    }
+  })
+  draftUpsert(@Body() dto: DraftUpsertApplicantDto) {
+    return this.applicants.draftUpsert(dto);
   }
 
-  @Get('profile/:applicantId')
-  @ApiOperation({ summary: 'Get applicant profile with items' })
-  get(@Param('applicantId') applicantId: string) {
-    return this.applicants.getProfile(applicantId);
+  @Post('draft-token')
+  @ApiOperation({ summary: 'Re-issue Draft token for DRAFT/REJECTED (optional passportNumber match)' })
+  issueDraftToken(@Body() dto: IssueDraftTokenDto) {
+    return this.applicants.issueDraftToken(dto.phone, dto.passportNumber);
   }
 
-  @Put('profile/:applicantId')
-  @ApiOperation({ summary: 'Update applicant profile (only DRAFT/REJECTED)' })
-  update(@Param('applicantId') applicantId: string, @Body() dto: UpdateApplicantProfileDto) {
-    return this.applicants.updateProfile(applicantId, dto, null);
+  @UseGuards(DraftTokenGuard)
+  @ApiSecurity('draft')
+  @Get('draft/me')
+  @ApiOperation({ summary: 'Get draft profile using Draft token' })
+  getDraft(@Req() req: any) {
+    return this.applicants.getDraft(req.applicantId);
   }
 
-  @Patch('profile/:applicantId/status')
-  @ApiOperation({ summary: 'Submit applicant profile (DRAFT/REJECTED -> SUBMITTED)' })
-  submit(@Param('applicantId') applicantId: string, @Body() _dto: SubmitApplicantProfileDto) {
-    return this.applicants.submit(applicantId, null);
+  @UseGuards(DraftTokenGuard)
+  @ApiSecurity('draft')
+  @Put('draft/me')
+  @ApiOperation({ summary: 'Update draft using Draft token and rotate token' })
+  updateDraft(@Req() req: any, @Body() dto: DraftUpsertApplicantDto) {
+    return this.applicants.draftUpdate(req.applicantId, dto);
   }
 
-  @Post(':applicantId/skills')
-  @ApiOperation({ summary: 'Add skill' })
-  addSkill(@Param('applicantId') applicantId: string, @Body() dto: AddSkillDto) {
-    return this.applicants.addSkill(applicantId, dto);
-  }
-
-  @Put('skills/:skillId')
-  @ApiOperation({ summary: 'Update skill' })
-  updateSkill(@Param('skillId') skillId: string, @Body() dto: UpdateSkillDto) {
-    return this.applicants.updateSkill(skillId, dto);
-  }
-
-  @Delete('skills/:skillId')
-  @ApiOperation({ summary: 'Delete skill' })
-  removeSkill(@Param('skillId') skillId: string) {
-    return this.applicants.removeSkill(skillId);
-  }
-
-  @Post(':applicantId/qualifications')
-  @ApiOperation({ summary: 'Add qualification' })
-  addQualification(@Param('applicantId') applicantId: string, @Body() dto: AddQualificationDto) {
-    return this.applicants.addQualification(applicantId, dto);
-  }
-
-  @Put('qualifications/:id')
-  @ApiOperation({ summary: 'Update qualification' })
-  updateQualification(@Param('id') id: string, @Body() dto: UpdateQualificationDto) {
-    return this.applicants.updateQualification(id, dto);
-  }
-
-  @Delete('qualifications/:id')
-  @ApiOperation({ summary: 'Delete qualification' })
-  removeQualification(@Param('id') id: string) {
-    return this.applicants.removeQualification(id);
-  }
-
-  @Post(':applicantId/experience')
-  @ApiOperation({ summary: 'Add work experience' })
-  addWorkExperience(@Param('applicantId') applicantId: string, @Body() dto: AddWorkExperienceDto) {
-    return this.applicants.addWorkExperience(applicantId, dto);
-  }
-
-  @Put('experience/:id')
-  @ApiOperation({ summary: 'Update work experience' })
-  updateWorkExperience(@Param('id') id: string, @Body() dto: UpdateWorkExperienceDto) {
-    return this.applicants.updateWorkExperience(id, dto);
-  }
-
-  @Delete('experience/:id')
-  @ApiOperation({ summary: 'Delete work experience' })
-  removeWorkExperience(@Param('id') id: string) {
-    return this.applicants.removeWorkExperience(id);
-  }
-
-  @Post(':applicantId/documents')
-  @ApiOperation({ summary: 'Add document' })
-  addDocument(@Param('applicantId') applicantId: string, @Body() dto: AddDocumentDto) {
-    return this.applicants.addDocument(applicantId, dto);
-  }
-
-  @Put('documents/:id')
-  @ApiOperation({ summary: 'Update document' })
-  updateDocument(@Param('id') id: string, @Body() dto: UpdateDocumentDto) {
-    return this.applicants.updateDocument(id, dto);
-  }
-
-  @Delete('documents/:id')
-  @ApiOperation({ summary: 'Delete document' })
-  removeDocument(@Param('id') id: string) {
-    return this.applicants.removeDocument(id);
+  @UseGuards(DraftTokenGuard)
+  @ApiSecurity('draft')
+  @Post('submit')
+  @ApiOperation({ summary: 'Submit draft for admin review (DRAFT → SUBMITTED)' })
+  submit(@Req() req: any, @Body() _dto: SubmitApplicantDto) {
+    return this.applicants.submit(req.applicantId, req.draftTokenRecordId);
   }
 }

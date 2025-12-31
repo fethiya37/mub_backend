@@ -1,31 +1,37 @@
-export type ApplicantProfileCreateInput = {
+export type ApplicantProfileUpsertInput = {
   phone: string;
   email?: string | null;
+
   firstName?: string | null;
   lastName?: string | null;
   gender?: string | null;
   dateOfBirth?: Date | null;
   nationality?: string | null;
+  region?: string | null;
+
   passportNumber?: string | null;
+  passportExpiry?: Date | null;
+  laborId?: string | null;
+
   address?: string | null;
   maritalStatus?: string | null;
-};
 
-export type ApplicantProfileUpdateInput = Partial<ApplicantProfileCreateInput> & {
-  profileStatus?: any;
-  submittedAt?: Date | null;
-  verifiedAt?: Date | null;
-  verifiedBy?: string | null;
-  rejectionReason?: string | null;
-  userId?: string | null;
+  visaNumber?: string | null;
+  applicationNumber?: string | null;
+  barcodeValue?: string | null;
+
+  skills?: { skillName: string; proficiencyLevel?: string | null; yearsOfExperience?: number | null }[] | undefined;
+  qualifications?: { qualificationType: string; institution?: string | null; country?: string | null; yearCompleted?: number | null }[] | undefined;
+  workExperiences?: { jobTitle: string; employerName?: string | null; country?: string | null; startDate?: Date | null; endDate?: Date | null; responsibilities?: string | null }[] | undefined;
+  documents?: { documentType: any; fileUrl: string; verificationStatus?: string | null }[] | undefined;
 };
 
 export abstract class ApplicantProfileRepository {
-  abstract create(input: ApplicantProfileCreateInput): Promise<any>;
   abstract findById(applicantId: string): Promise<any | null>;
   abstract findByPhone(phone: string): Promise<any | null>;
-  abstract listAll(page: number, pageSize: number): Promise<{ items: any[]; total: number }>;
-  abstract listByStatus(status: string, page: number, pageSize: number): Promise<{ items: any[]; total: number }>;
-  abstract update(applicantId: string, input: ApplicantProfileUpdateInput): Promise<any>;
+  abstract listByStatus(status: string | undefined, page: number, pageSize: number): Promise<{ items: any[]; total: number }>;
+  abstract upsertDraft(input: ApplicantProfileUpsertInput): Promise<any>;
+  abstract setStatus(applicantId: string, status: any, patch: any): Promise<any>;
+  abstract linkUser(applicantId: string, userId: string, verifiedBy: string): Promise<any>;
+  abstract updateVerified(applicantId: string, patch: any): Promise<any>;
 }
-

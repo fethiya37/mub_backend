@@ -14,11 +14,8 @@ export class AdminAuthController {
 
   @RequirePermissions('USER_MANAGE')
   @Post('users')
-  @ApiOperation({ summary: 'Admin creates Agent/Partner/Applicant (default password = phone)' })
-  @ApiResponse({ status: 201, description: 'Created', schema: { example: { userId: 'uuid' } } })
-  @ApiResponse({ status: 401, description: 'Unauthorized' })
-  @ApiResponse({ status: 403, description: 'Forbidden' })
-  @ApiResponse({ status: 409, description: 'Conflict' })
+  @ApiOperation({ summary: 'Admin creates user and sends Account Setup email (no default password)' })
+  @ApiResponse({ status: 201, schema: { example: { ok: true, userId: 'uuid' } } })
   adminCreateUser(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminCreateUserDto) {
     return this.auth.adminCreateUser(dto, user.userId);
   }

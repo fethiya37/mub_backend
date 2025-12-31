@@ -12,6 +12,8 @@ import { AuditModule } from './modules/audit/audit.module';
 import { HealthModule } from './modules/health/health.module';
 import { appGuards } from './app.guards';
 import { ApplicantsModule } from './modules/applicants/applicants.module';
+import { EmployersModule } from './modules/employers/employers.module';
+import { MailModule } from './modules/mail/mail.module';
 
 @Module({
   imports: [
@@ -20,6 +22,8 @@ import { ApplicantsModule } from './modules/applicants/applicants.module';
       load: [configuration],
       validate: envValidation
     }),
+
+
     ThrottlerModule.forRoot(throttleConfig()),
     PrismaModule,
     AuditModule,
@@ -27,8 +31,10 @@ import { ApplicantsModule } from './modules/applicants/applicants.module';
     UsersModule,
     AuthModule,
     HealthModule,
-    ApplicantsModule
+    ApplicantsModule,
+    EmployersModule,
+    MailModule
   ],
   providers: [...appGuards]
 })
-export class AppModule {}
+export class AppModule { }

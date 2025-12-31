@@ -21,12 +21,14 @@ model User {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  userRoles      UserRole[]
-  refreshTokens  RefreshToken[]
-  passwordResets PasswordResetToken[]
-  auditLogs      AuditLog[]           @relation("AuditPerformedBy")
+  userRoles     UserRole[]
+  refreshTokens RefreshToken[]
+  actionTokens  AccountActionToken[]
+  auditLogs     AuditLog[] @relation("AuditPerformedBy")
 
-  applicantProfile ApplicantProfile?
+  applicantProfile     ApplicantProfile?
+  employer             Employer?
+  employerApprovalLogs EmployerApprovalLog[]
 }
 
 model Role {
@@ -87,17 +89,25 @@ model RefreshToken {
   @@index([expiresAt])
 }
 
-model PasswordResetToken {
-  id        String    @id @default(uuid())
+enum AccountActionTokenType {
+  ACCOUNT_SETUP
+  PASSWORD_RESET
+  EMAIL_VERIFY
+}
+
+model AccountActionToken {
+  id        String               @id @default(uuid())
   userId    String
-  tokenHash String    @unique
+  type      AccountActionTokenType
+  tokenHash String               @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime  @default(now())
+  createdAt DateTime             @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
   @@index([userId])
+  @@index([type])
   @@index([expiresAt])
 }
 
@@ -126,6 +136,14 @@ enum ApplicantProfileStatus {
   REJECTED
 }
 
+enum ApplicantDocumentType {
+  PASSPORT
+  PERSONAL_PHOTO
+  COC_CERTIFICATE
+  LABOR_ID
+  OTHER
+}
+
 model ApplicantProfile {
   applicantId String  @id @default(uuid())
   userId      String? @unique
@@ -136,10 +154,18 @@ model ApplicantProfile {
   dateOfBirth    DateTime?
   nationality    String?
   passportNumber String?
-  phone          String
-  email          String?
-  address        String?
-  maritalStatus  String?
+  passportExpiry DateTime?
+  laborId        String?
+  region         String?
+
+  phone         String
+  email         String?
+  address       String?
+  maritalStatus String?
+
+  visaNumber        String?
+  applicationNumber String?
+  barcodeValue      String?
 
   profileStatus ApplicantProfileStatus @default(DRAFT)
 
@@ -157,11 +183,44 @@ model ApplicantProfile {
   qualifications  ApplicantQualification[]
   workExperiences ApplicantWorkExperience[]
   documents       ApplicantDocument[]
+  draftTokens     ApplicantDraftToken[]
 
-  @@unique([passportNumber])
-  @@index([phone])
+  @@unique([phone])
   @@index([email])
+  @@index([passportNumber])
   @@index([profileStatus])
+  @@index([laborId])
+}
+
+model ApplicantDocument {
+  id                 String  @id @default(uuid())
+  applicantId        String
+  documentType       ApplicantDocumentType
+  fileUrl            String
+  verificationStatus String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+
+  @@unique([applicantId, documentType])
+  @@index([applicantId])
+  @@index([documentType])
+}
+
+model ApplicantDraftToken {
+  id          String   @id @default(uuid())
+  applicantId String
+  tokenHash   String   @unique
+  expiresAt   DateTime
+  usedAt      DateTime?
+  createdAt   DateTime @default(now())
+
+  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+
+  @@index([applicantId])
+  @@index([expiresAt])
 }
 
 model ApplicantSkill {
@@ -214,18 +273,104 @@ model ApplicantWorkExperience {
   @@index([applicantId])
 }
 
-model ApplicantDocument {
+enum EmployerStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum EmployerCreatedBy {
+  EMPLOYER
+  ADMIN
+}
+
+enum EmployerApprovalAction {
+  APPROVED
+  REJECTED
+}
+
+enum JobStatus {
+  DRAFT
+  ACTIVE
+  CLOSED
+}
+
+enum ContractType {
+  FULL_TIME
+  PART_TIME
+  TEMPORARY
+  CONTRACT
+  OTHER
+}
+
+model Employer {
   id                 String  @id @default(uuid())
-  applicantId        String
-  documentType       String
-  fileUrl            String
-  verificationStatus String?
+  organizationName   String
+  country            String
+  contactEmail       String
+  contactPhone       String
+  registrationNumber String  @unique
+  address            String?
+
+  ownerName      String
+  ownerIdNumber  String
+  licenseNumber  String  @unique
+  licenseFileUrl String
+  licenseExpiry  DateTime?
+
+  status    EmployerStatus    @default(PENDING)
+  createdBy EmployerCreatedBy
+  createdAt DateTime          @default(now())
+  updatedAt DateTime          @updatedAt
+
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  approvalLogs EmployerApprovalLog[]
+  jobs         JobPosting[]
+
+  @@unique([contactEmail])
+  @@unique([contactPhone])
+  @@index([status])
+  @@index([country])
+  @@index([licenseNumber])
+  @@index([ownerIdNumber])
+}
+
+
+model EmployerApprovalLog {
+  id         String                 @id @default(uuid())
+  employerId String
+  action     EmployerApprovalAction
+  reason     String?
+  actionBy   String
+  actionDate DateTime               @default(now())
+
+  employer Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  admin    User     @relation(fields: [actionBy], references: [id], onDelete: Cascade)
+
+  @@index([employerId])
+  @@index([actionDate])
+}
+
+model JobPosting {
+  id             String       @id @default(uuid())
+  employerId     String
+  jobTitle       String
+  jobDescription String
+  country        String
+  city           String?
+  salaryRange    String?
+  contractType   ContractType
+  status         JobStatus    @default(DRAFT)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+  employer Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
 
-  @@index([applicantId])
-  @@index([documentType])
+  @@index([employerId])
+  @@index([status])
+  @@index([country])
 }
