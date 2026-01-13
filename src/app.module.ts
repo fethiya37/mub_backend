@@ -14,6 +14,8 @@ import { appGuards } from './app.guards';
 import { ApplicantsModule } from './modules/applicants/applicants.module';
 import { EmployersModule } from './modules/employers/employers.module';
 import { MailModule } from './modules/mail/mail.module';
+import { CvModule } from './modules/cv/cv.module';
+import { VisaModule } from './modules/visa/visa.module';
 
 @Module({
   imports: [
@@ -33,7 +35,9 @@ import { MailModule } from './modules/mail/mail.module';
     HealthModule,
     ApplicantsModule,
     EmployersModule,
-    MailModule
+    MailModule,
+    CvModule,
+    VisaModule
   ],
   providers: [...appGuards]
 })

@@ -24,11 +24,20 @@ model User {
   userRoles     UserRole[]
   refreshTokens RefreshToken[]
   actionTokens  AccountActionToken[]
-  auditLogs     AuditLog[] @relation("AuditPerformedBy")
+  auditLogs     AuditLog[]           @relation("AuditPerformedBy")
 
   applicantProfile     ApplicantProfile?
   employer             Employer?
   employerApprovalLogs EmployerApprovalLog[]
+  cvAdminReviews       CvAdminReview[]
+
+  visaAssignedAsCaseOfficer VisaApplication[]     @relation("VisaAssignedCaseOfficer")
+  visaSubmittedByMe         VisaApplication[]     @relation("VisaSubmittedByAdmin")
+  visaStatusHistories       VisaStatusHistory[]
+  visaDocsUploadedByMe      VisaDocument[]        @relation("VisaDocUploadedBy")
+  visaDocsVerifiedByMe      VisaDocument[]        @relation("VisaDocVerifiedBy")
+  visaComplianceChecks      VisaComplianceCheck[]
+  visaNotifications         VisaNotification[]
 }
 
 model Role {
@@ -96,13 +105,13 @@ enum AccountActionTokenType {
 }
 
 model AccountActionToken {
-  id        String               @id @default(uuid())
+  id        String                 @id @default(uuid())
   userId    String
   type      AccountActionTokenType
-  tokenHash String               @unique
+  tokenHash String                 @unique
   expiresAt DateTime
   usedAt    DateTime?
-  createdAt DateTime             @default(now())
+  createdAt DateTime               @default(now())
 
   user User @relation(fields: [userId], references: [id], onDelete: Cascade)
 
@@ -179,11 +188,13 @@ model ApplicantProfile {
 
   user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  skills          ApplicantSkill[]
-  qualifications  ApplicantQualification[]
-  workExperiences ApplicantWorkExperience[]
-  documents       ApplicantDocument[]
-  draftTokens     ApplicantDraftToken[]
+  skills           ApplicantSkill[]
+  qualifications   ApplicantQualification[]
+  workExperiences  ApplicantWorkExperience[]
+  documents        ApplicantDocument[]
+  draftTokens      ApplicantDraftToken[]
+  applicantCvs     ApplicantCv[]
+  visaApplications VisaApplication[]
 
   @@unique([phone])
   @@index([email])
@@ -193,7 +204,7 @@ model ApplicantProfile {
 }
 
 model ApplicantDocument {
-  id                 String  @id @default(uuid())
+  id                 String                @id @default(uuid())
   applicantId        String
   documentType       ApplicantDocumentType
   fileUrl            String
@@ -210,12 +221,12 @@ model ApplicantDocument {
 }
 
 model ApplicantDraftToken {
-  id          String   @id @default(uuid())
+  id          String    @id @default(uuid())
   applicantId String
-  tokenHash   String   @unique
+  tokenHash   String    @unique
   expiresAt   DateTime
   usedAt      DateTime?
-  createdAt   DateTime @default(now())
+  createdAt   DateTime  @default(now())
 
   applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
 
@@ -315,7 +326,7 @@ model Employer {
 
   ownerName      String
   ownerIdNumber  String
-  licenseNumber  String  @unique
+  licenseNumber  String    @unique
   licenseFileUrl String
   licenseExpiry  DateTime?
 
@@ -327,8 +338,9 @@ model Employer {
   userId String? @unique
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  approvalLogs EmployerApprovalLog[]
-  jobs         JobPosting[]
+  approvalLogs     EmployerApprovalLog[]
+  jobs             JobPosting[]
+  visaApplications VisaApplication[]
 
   @@unique([contactEmail])
   @@unique([contactPhone])
@@ -337,7 +349,6 @@ model Employer {
   @@index([licenseNumber])
   @@index([ownerIdNumber])
 }
-
 
 model EmployerApprovalLog {
   id         String                 @id @default(uuid())
@@ -368,9 +379,293 @@ model JobPosting {
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  employer Employer @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  employer         Employer          @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  applicantCvs     ApplicantCv[]
+  visaApplications VisaApplication[]
 
   @@index([employerId])
   @@index([status])
   @@index([country])
+}
+
+enum ApplicantCvStatus {
+  draft
+  submitted
+  approved
+  rejected
+}
+
+enum CvAdminReviewStatus {
+  approved
+  rejected
+}
+
+model CvTemplate {
+  id           String   @id @default(uuid())
+  name         String
+  description  String?
+  htmlTemplate String
+  cssStyle     String?
+  isActive     Boolean  @default(true)
+  createdBy    String?
+  createdAt    DateTime @default(now())
+  updatedAt    DateTime @updatedAt
+
+  cvs ApplicantCv[]
+
+  @@index([isActive])
+  @@index([createdAt])
+}
+
+model ApplicantCv {
+  id             String            @id @default(uuid())
+  applicantId    String
+  jobId          String?
+  cvTemplateId   String
+  status         ApplicantCvStatus @default(draft)
+  currentVersion Int               @default(0)
+  submittedAt    DateTime?
+  createdAt      DateTime          @default(now())
+  updatedAt      DateTime          @updatedAt
+
+  template  CvTemplate       @relation(fields: [cvTemplateId], references: [id], onDelete: Restrict)
+  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+  job       JobPosting?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  versions ApplicantCvVersion[]
+  sections ApplicantCvSection[]
+  reviews  CvAdminReview[]
+  audits   CvAuditLog[]
+
+  @@index([applicantId])
+  @@index([jobId])
+  @@index([status])
+  @@index([createdAt])
+}
+
+model ApplicantCvVersion {
+  id            String   @id @default(uuid())
+  cvId          String
+  versionNumber Int
+  pdfUrl        String
+  htmlSnapshot  String
+  isFinal       Boolean  @default(false)
+  createdAt     DateTime @default(now())
+
+  cv ApplicantCv @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@unique([cvId, versionNumber])
+  @@index([cvId])
+  @@index([createdAt])
+}
+
+model ApplicantCvSection {
+  id            String  @id @default(uuid())
+  cvId          String
+  sectionName   String
+  isEnabled     Boolean @default(true)
+  displayOrder  Int
+  customContent Json?
+
+  cv ApplicantCv @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@unique([cvId, sectionName])
+  @@index([cvId])
+  @@index([displayOrder])
+}
+
+model CvAdminReview {
+  id         String              @id @default(uuid())
+  cvId       String
+  adminId    String
+  status     CvAdminReviewStatus
+  comments   String?
+  reviewedAt DateTime            @default(now())
+
+  cv    ApplicantCv @relation(fields: [cvId], references: [id], onDelete: Cascade)
+  admin User        @relation(fields: [adminId], references: [id], onDelete: Restrict)
+
+  @@index([cvId])
+  @@index([reviewedAt])
+}
+
+model CvAuditLog {
+  id          String   @id @default(uuid())
+  cvId        String
+  action      String
+  performedBy String?
+  meta        Json?
+  performedAt DateTime @default(now())
+
+  cv ApplicantCv @relation(fields: [cvId], references: [id], onDelete: Cascade)
+
+  @@index([cvId])
+  @@index([performedAt])
+}
+
+enum VisaApplicationStatus {
+  DRAFT
+  SUBMITTED
+  UNDER_REVIEW
+  ADDITIONAL_DOCUMENTS_REQUIRED
+  EMBASSY_PROCESSING
+  APPROVED
+  REJECTED
+  EXPIRED
+  WITHDRAWN
+}
+
+enum VisaDocumentType {
+  PASSPORT
+  MEDICAL_CLEARANCE
+  POLICE_CLEARANCE
+  EMPLOYMENT_CONTRACT
+  INVITATION_LETTER
+  EMBASSY_FORMS
+  OTHER
+}
+
+enum VisaDocumentVerificationStatus {
+  PENDING
+  VERIFIED
+  REJECTED
+}
+
+enum VisaComplianceRequirementStatus {
+  PENDING
+  COMPLETED
+  FAILED
+}
+
+enum VisaNotificationType {
+  EXPIRY_ALERT
+  STATUS_UPDATE
+  DOCUMENT_REQUEST
+  DECISION_RECORDED
+}
+
+model VisaApplication {
+  id                   String                @id @default(uuid())
+  applicantId          String
+  employerId           String?
+  jobId                String?
+  visaType             String
+  destinationCountry   String
+  applicationReference String?
+  status               VisaApplicationStatus @default(DRAFT)
+
+  assignedCaseOfficerId String?
+  submittedByAdminId    String?
+  submissionDate        DateTime?
+  decisionDate          DateTime?
+  visaIssueDate         DateTime?
+  visaExpiryDate        DateTime?
+
+  remarks String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+  employer  Employer?        @relation(fields: [employerId], references: [id], onDelete: SetNull)
+  job       JobPosting?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
+
+  assignedCaseOfficer User? @relation("VisaAssignedCaseOfficer", fields: [assignedCaseOfficerId], references: [id], onDelete: SetNull)
+  submittedByAdmin    User? @relation("VisaSubmittedByAdmin", fields: [submittedByAdminId], references: [id], onDelete: SetNull)
+
+  documents     VisaDocument[]
+  compliance    VisaComplianceCheck[]
+  statusHistory VisaStatusHistory[]
+  notifications VisaNotification[]
+
+  @@index([applicantId])
+  @@index([employerId])
+  @@index([jobId])
+  @@index([status])
+  @@index([destinationCountry])
+  @@index([assignedCaseOfficerId])
+}
+
+model VisaStatusHistory {
+  id                String                 @id @default(uuid())
+  visaApplicationId String
+  previousStatus    VisaApplicationStatus?
+  newStatus         VisaApplicationStatus
+  changedByAdminId  String?
+  changeReason      String?
+  changedAt         DateTime               @default(now())
+
+  visa  VisaApplication @relation(fields: [visaApplicationId], references: [id], onDelete: Cascade)
+  admin User?           @relation(fields: [changedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([visaApplicationId])
+  @@index([changedAt])
+  @@index([newStatus])
+}
+
+model VisaDocument {
+  id                 String                         @id @default(uuid())
+  visaApplicationId  String
+  documentType       VisaDocumentType
+  fileUrl            String
+  fileHash           String?
+  versionNumber      Int                            @default(1)
+  isActive           Boolean                        @default(true)
+  verificationStatus VisaDocumentVerificationStatus @default(PENDING)
+  verificationReason String?
+  verifiedByAdminId  String?
+  verifiedAt         DateTime?
+
+  uploadedByAdminId String?
+  uploadedAt        DateTime @default(now())
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visa       VisaApplication @relation(fields: [visaApplicationId], references: [id], onDelete: Cascade)
+  verifiedBy User?           @relation("VisaDocVerifiedBy", fields: [verifiedByAdminId], references: [id], onDelete: SetNull)
+  uploadedBy User?           @relation("VisaDocUploadedBy", fields: [uploadedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([visaApplicationId])
+  @@index([documentType])
+  @@index([isActive])
+  @@index([verificationStatus])
+}
+
+model VisaComplianceCheck {
+  id                String                          @id @default(uuid())
+  visaApplicationId String
+  requirementType   String
+  requirementStatus VisaComplianceRequirementStatus @default(PENDING)
+  remarks           String?
+  checkedByAdminId  String?
+  checkedAt         DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visa  VisaApplication @relation(fields: [visaApplicationId], references: [id], onDelete: Cascade)
+  admin User?           @relation(fields: [checkedByAdminId], references: [id], onDelete: SetNull)
+
+  @@index([visaApplicationId])
+  @@index([requirementStatus])
+  @@index([checkedAt])
+}
+
+model VisaNotification {
+  id                String               @id @default(uuid())
+  visaApplicationId String
+  adminUserId       String?
+  notificationType  VisaNotificationType
+  message           String
+  isRead            Boolean              @default(false)
+  createdAt         DateTime             @default(now())
+
+  visa  VisaApplication @relation(fields: [visaApplicationId], references: [id], onDelete: Cascade)
+  admin User?           @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
+
+  @@index([visaApplicationId])
+  @@index([adminUserId])
+  @@index([notificationType])
+  @@index([createdAt])
 }

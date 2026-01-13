@@ -33,6 +33,7 @@ import { RbacModule } from '../rbac/rbac.module';
     { provide: EmployerRepository, useClass: EmployerPrismaRepository },
     { provide: EmployerApprovalLogRepository, useClass: EmployerApprovalLogPrismaRepository },
     { provide: JobPostingRepository, useClass: JobPostingPrismaRepository }
-  ]
+  ],
+  exports: [JobPostingRepository, EmployerAccessService, EmployerRepository]
 })
-export class EmployersModule {}
+export class EmployersModule { }

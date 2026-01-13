@@ -30,6 +30,6 @@ import { DraftTokenGuard } from './guards/draft-token.guard';
     { provide: ApplicantProfileRepository, useClass: ApplicantProfilePrismaRepository },
     { provide: ApplicantDraftTokenRepository, useClass: ApplicantDraftTokenPrismaRepository }
   ],
-  exports: [ApplicantsService]
+  exports: [ApplicantsService, ApplicantVerifiedService, ApplicantProfileRepository]
 })
 export class ApplicantsModule {}
