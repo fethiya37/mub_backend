@@ -1,16 +1,16 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsArray, IsOptional, IsString, MinLength, ValidateNested } from 'class-validator';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
+import { IsArray, IsOptional, IsString, MinLength, ValidateNested } from 'class-validator';
 import { CvSectionDto } from '../shared/cv-section.dto';
 
 export class UpdateCvDraftDto {
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional({ required: false, example: 'Updated professional summary...' })
   @IsOptional()
   @IsString()
   @MinLength(5)
   summary?: string;
 
-  @ApiProperty({ required: false, type: [CvSectionDto] })
+  @ApiPropertyOptional({ required: false, type: [CvSectionDto] })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

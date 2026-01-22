@@ -1,4 +1,3 @@
-// src/modules/cv/prisma/cv-audit-log.prisma-repository.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { CvAuditCreate, CvAuditLogRepository } from '../repositories/cv-audit-log.repository';

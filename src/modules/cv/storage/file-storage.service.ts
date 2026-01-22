@@ -1,4 +1,3 @@
-// src/modules/cv/storage/file-storage.service.ts
 import { Injectable } from '@nestjs/common';
 import { promises as fs } from 'fs';
 import path from 'path';

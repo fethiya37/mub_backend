@@ -26,7 +26,7 @@ export class CvRenderService {
       return `
         <div class="cv-header">
           <h1>${this.escape(fullName)}</h1>
-          <div class="cv-subtitle">${this.escape(job?.jobTitle ?? payload.targetRole ?? '')}</div>
+          <div class="cv-subtitle">${this.escape(job?.jobTitle ?? '')}</div>
           <div class="cv-contact">
             <div>${this.escape(a.phone ?? '')}</div>
             <div>${this.escape(a.email ?? '')}</div>
@@ -131,8 +131,8 @@ export class CvRenderService {
         <section class="cv-section">
           <h2>Availability & Job Preferences</h2>
           <div class="cv-kv">
-            <div><b>Preferred Job Role:</b> ${this.escape(pref.preferredRole ?? payload.targetRole ?? '')}</div>
-            <div><b>Preferred Country:</b> ${this.escape(pref.preferredCountry ?? payload.country ?? '')}</div>
+            <div><b>Preferred Job Role:</b> ${this.escape(pref.preferredRole ?? job?.jobTitle ?? '')}</div>
+            <div><b>Preferred Country:</b> ${this.escape(pref.preferredCountry ?? job?.country ?? '')}</div>
             <div><b>Availability Date:</b> ${this.escape(pref.availabilityDate ?? '')}</div>
             <div><b>Willingness to Relocate:</b> ${this.escape(pref.willingToRelocate ?? '')}</div>
           </div>
@@ -162,18 +162,10 @@ export class CvRenderService {
       .filter((s) => s.isEnabled !== false)
       .sort((a, b) => a.displayOrder - b.displayOrder);
 
-    const body = ordered
-      .map((s) => {
-        const base = this.sectionHtml(String(s.sectionName), input.payload);
-        return base;
-      })
-      .join('');
+    const body = ordered.map((s) => this.sectionHtml(String(s.sectionName), input.payload)).join('');
 
     const cssBlock = `<style>${input.templateCss ?? ''}</style>`;
-    const doc = input.templateHtml
-      .replace('{{CSS}}', cssBlock)
-      .replace('{{BODY}}', body);
 
-    return doc;
+    return input.templateHtml.replace('{{CSS}}', cssBlock).replace('{{BODY}}', body);
   }
 }

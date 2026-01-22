@@ -1,7 +1,7 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
-import { ContractTypes, JobStatuses } from './shared/enums.dto';
-import type { ContractType, JobStatus } from './shared/enums.dto';
+import { ContractTypes } from './shared/enums.dto';
+import type { ContractType } from './shared/enums.dto';
 
 export class CreateJobDto {
   @ApiProperty({ example: 'Housekeeper' })
@@ -9,7 +9,7 @@ export class CreateJobDto {
   @MinLength(2)
   jobTitle!: string;
 
-  @ApiProperty({ example: 'Full job description...' })
+  @ApiProperty({ example: 'We are hiring a housekeeper for a family in Riyadh. Duties include cleaning, laundry, and basic meal prep.' })
   @IsString()
   @MinLength(10)
   jobDescription!: string;
@@ -29,12 +29,12 @@ export class CreateJobDto {
   @IsString()
   salaryRange?: string;
 
-  @ApiProperty({ enum: ContractTypes })
+  @ApiProperty({ enum: ContractTypes, example: 'FULL_TIME' })
   @IsIn(ContractTypes)
   contractType!: ContractType;
 
   @ApiPropertyOptional({ enum: ['DRAFT', 'ACTIVE'], example: 'DRAFT' })
   @IsOptional()
   @IsIn(['DRAFT', 'ACTIVE'])
-  status?: Extract<JobStatus, 'DRAFT' | 'ACTIVE'>;
+  status?: 'DRAFT' | 'ACTIVE';
 }

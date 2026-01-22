@@ -20,6 +20,9 @@ export type ApplicantProfileUpsertInput = {
   applicationNumber?: string | null;
   barcodeValue?: string | null;
 
+  registrationSource?: 'SELF' | 'AGENCY' | 'MUB_STAFF' | null;
+  createdBy?: string | null;
+
   skills?: { skillName: string; proficiencyLevel?: string | null; yearsOfExperience?: number | null }[] | undefined;
   qualifications?: { qualificationType: string; institution?: string | null; country?: string | null; yearCompleted?: number | null }[] | undefined;
   workExperiences?: { jobTitle: string; employerName?: string | null; country?: string | null; startDate?: Date | null; endDate?: Date | null; responsibilities?: string | null }[] | undefined;
@@ -29,7 +32,22 @@ export type ApplicantProfileUpsertInput = {
 export abstract class ApplicantProfileRepository {
   abstract findById(applicantId: string): Promise<any | null>;
   abstract findByPhone(phone: string): Promise<any | null>;
-  abstract listByStatus(status: string | undefined, page: number, pageSize: number): Promise<{ items: any[]; total: number }>;
+  abstract findByUserId(userId: string): Promise<any | null>;
+
+  abstract listByStatus(
+    status: string | undefined,
+    createdBy: string | undefined,
+    page: number,
+    pageSize: number
+  ): Promise<{ items: any[]; total: number }>;
+
+  abstract listByCreator(
+    createdBy: string,
+    status: string | undefined,
+    page: number,
+    pageSize: number
+  ): Promise<{ items: any[]; total: number }>;
+
   abstract upsertDraft(input: ApplicantProfileUpsertInput): Promise<any>;
   abstract setStatus(applicantId: string, status: any, patch: any): Promise<any>;
   abstract linkUser(applicantId: string, userId: string, verifiedBy: string): Promise<any>;

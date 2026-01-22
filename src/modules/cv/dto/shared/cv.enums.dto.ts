@@ -24,6 +24,6 @@ export const CV_SECTIONS = {
 export type CvSectionName = (typeof CV_SECTIONS)[keyof typeof CV_SECTIONS];
 
 export class CvStatusDto {
-  @ApiProperty({ enum: Object.values(CV_STATUS) })
+  @ApiProperty({ enum: Object.values(CV_STATUS), example: CV_STATUS.draft })
   status!: CvStatus;
 }

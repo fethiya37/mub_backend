@@ -1,4 +1,3 @@
-// src/modules/cv/services/cv-template.service.ts
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { CvTemplateRepository } from '../repositories/cv-template.repository';
 

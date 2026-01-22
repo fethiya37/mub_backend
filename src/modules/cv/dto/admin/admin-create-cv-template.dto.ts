@@ -1,28 +1,28 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsBoolean, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class AdminCreateCvTemplateDto {
-  @ApiProperty()
+  @ApiProperty({ example: 'Default Template v1' })
   @IsString()
   @MinLength(2)
   name!: string;
 
-  @ApiProperty({ required: false })
+  @ApiPropertyOptional({ required: false, example: 'Simple professional template' })
   @IsOptional()
   @IsString()
   description?: string;
 
-  @ApiProperty({ description: 'HTML template with placeholders' })
+  @ApiProperty({ description: 'HTML template with placeholders', example: '<html><head>{{CSS}}</head><body>{{BODY}}</body></html>' })
   @IsString()
   @MinLength(10)
   htmlTemplate!: string;
 
-  @ApiProperty({ required: false, description: 'CSS string' })
+  @ApiPropertyOptional({ required: false, description: 'CSS string', example: 'body{font-family:Arial;}' })
   @IsOptional()
   @IsString()
   cssStyle?: string;
 
-  @ApiProperty({ required: false, default: true })
+  @ApiPropertyOptional({ required: false, default: true, example: true })
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;

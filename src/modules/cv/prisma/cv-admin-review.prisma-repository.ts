@@ -1,4 +1,3 @@
-// src/modules/cv/prisma/cv-admin-review.prisma-repository.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { CvAdminReviewCreate, CvAdminReviewRepository } from '../repositories/cv-admin-review.repository';

@@ -22,10 +22,18 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
     });
   }
 
-  async listByStatus(status: string | undefined, page: number, pageSize: number) {
+  findByUserId(userId: string) {
+    return this.prisma.applicantProfile.findFirst({
+      where: { userId },
+      include: { skills: true, qualifications: true, workExperiences: true, documents: true }
+    });
+  }
+
+  async listByStatus(status: string | undefined, createdBy: string | undefined, page: number, pageSize: number) {
     const skip = (page - 1) * pageSize;
     const where: any = {};
     if (status) where.profileStatus = status;
+    if (createdBy) where.createdBy = createdBy;
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.applicantProfile.findMany({
@@ -38,6 +46,10 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
     ]);
 
     return { items, total };
+  }
+
+  async listByCreator(createdBy: string, status: string | undefined, page: number, pageSize: number) {
+    return this.listByStatus(status, createdBy, page, pageSize);
   }
 
   async upsertDraft(input: ApplicantProfileUpsertInput) {
@@ -62,7 +74,9 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
         maritalStatus: input.maritalStatus ?? undefined,
         visaNumber: input.visaNumber ?? undefined,
         applicationNumber: input.applicationNumber ?? undefined,
-        barcodeValue: input.barcodeValue ?? undefined
+        barcodeValue: input.barcodeValue ?? undefined,
+        registrationSource: input.registrationSource ?? undefined,
+        createdBy: input.createdBy ?? undefined
       };
 
       const profile = existing
@@ -88,6 +102,8 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
               visaNumber: input.visaNumber ?? null,
               applicationNumber: input.applicationNumber ?? null,
               barcodeValue: input.barcodeValue ?? null,
+              registrationSource: input.registrationSource ?? 'SELF',
+              createdBy: input.createdBy ?? null,
               profileStatus: 'DRAFT'
             }
           });

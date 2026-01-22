@@ -1,9 +1,9 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import crypto from 'crypto';
 import { PrismaService } from '../../../database/prisma.service';
 import { ApplicantProfileRepository } from '../repositories/applicant-profile.repository';
 import { ApplicantStatusService } from './applicant-status.service';
 import { AuthService } from '../../auth/services/auth.service';
-import crypto from 'crypto';
 
 @Injectable()
 export class ApplicantReviewService {
@@ -14,8 +14,8 @@ export class ApplicantReviewService {
     private readonly auth: AuthService
   ) {}
 
-  async list(status: string | undefined, page = 1, pageSize = 50) {
-    return this.profiles.listByStatus(status, page, pageSize);
+  async list(status: string | undefined, createdBy: string | undefined, page = 1, pageSize = 50) {
+    return this.profiles.listByStatus(status, createdBy, page, pageSize);
   }
 
   async get(applicantId: string) {

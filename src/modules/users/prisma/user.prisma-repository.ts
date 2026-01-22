@@ -40,7 +40,15 @@ export class UserPrismaRepository extends UserRepository {
         orderBy: { createdAt: 'desc' },
         skip,
         take: pageSize,
-        select: { id: true, email: true, phone: true, isActive: true, applicantVerified: true, createdAt: true, updatedAt: true }
+        select: {
+          id: true,
+          email: true,
+          phone: true,
+          isActive: true,
+          applicantVerified: true,
+          createdAt: true,
+          updatedAt: true
+        }
       }),
       this.prisma.user.count()
     ]);

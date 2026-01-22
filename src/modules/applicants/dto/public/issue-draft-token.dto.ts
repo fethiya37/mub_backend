@@ -7,7 +7,7 @@ export class IssueDraftTokenDto {
   @MinLength(6)
   phone!: string;
 
-  @ApiPropertyOptional({ example: 'P12345678' })
+  @ApiPropertyOptional({ example: 'P12345678', description: 'Optional extra validation for re-issuing token' })
   @IsOptional()
   @IsString()
   passportNumber?: string;

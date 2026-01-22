@@ -23,6 +23,8 @@ import { getPasswordResetTemplate } from '../../mail/templates/password-reset.te
 import { getEmailVerifyTemplate } from '../../mail/templates/email-verify.template';
 import { AccountActionTokensService } from './account-action-tokens.service';
 
+type AdminCreatableRole = 'MUB_STAFF' | 'FINANCE_OFFICER' | 'SYSTEM';
+
 @Injectable()
 export class AuthService {
   constructor(
@@ -133,24 +135,27 @@ export class AuthService {
   }
 
   async adminCreateUser(dto: AdminCreateUserDto, performedBy: string) {
+    const allowed: Record<string, true> = { MUB_STAFF: true, FINANCE_OFFICER: true, SYSTEM: true };
+    if (!allowed[dto.role]) throw new BadRequestException('Role cannot be created directly');
+
     const existsPhone = await this.users.findByIdentifier(dto.phone);
     if (existsPhone) throw new ConflictException('Phone already exists');
 
     const existsEmail = await this.users.findByIdentifier(dto.email);
     if (existsEmail) throw new ConflictException('Email already exists');
 
-    const randomPassword = crypto.randomBytes(24).toString('base64url');
-    const passwordHash = await this.passwords.hash(randomPassword);
+    const unusablePassword = crypto.randomBytes(24).toString('base64url');
+    const passwordHash = await this.passwords.hash(unusablePassword);
 
     const user = await this.users.create({
       phone: dto.phone,
       email: dto.email,
       passwordHash,
       isActive: true,
-      applicantVerified: dto.role === 'APPLICANT' ? false : true
+      applicantVerified: true
     });
 
-    await this.rbac.replaceUserRoles(user.id, [dto.role]);
+    await this.rbac.replaceUserRoles(user.id, [dto.role as AdminCreatableRole]);
 
     await this.audit.log({
       performedBy,
@@ -167,8 +172,7 @@ export class AuthService {
 
   async forgotPassword(dto: ForgotPasswordDto) {
     const user = await this.users.findByIdentifier(dto.email);
-    if (!user) return { ok: true };
-    if (!user.email) return { ok: true };
+    if (!user || !user.email) return { ok: true };
 
     const mins = process.env.PASSWORD_RESET_EXPIRES_MINUTES ? Number(process.env.PASSWORD_RESET_EXPIRES_MINUTES) : 20;
     const expiresAt = new Date(Date.now() + mins * 60 * 1000);
@@ -218,8 +222,7 @@ export class AuthService {
 
   async requestEmailVerification(dto: RequestEmailVerificationDto) {
     const user = await this.users.findByIdentifier(dto.email);
-    if (!user) return { ok: true };
-    if (!user.email) return { ok: true };
+    if (!user || !user.email) return { ok: true };
 
     const mins = process.env.EMAIL_VERIFY_EXPIRES_MINUTES ? Number(process.env.EMAIL_VERIFY_EXPIRES_MINUTES) : 1440;
     const expiresAt = new Date(Date.now() + mins * 60 * 1000);

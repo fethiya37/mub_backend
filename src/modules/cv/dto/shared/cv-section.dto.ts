@@ -3,20 +3,20 @@ import { IsBoolean, IsInt, IsObject, IsOptional, IsString, Min } from 'class-val
 import { CV_SECTIONS } from './cv.enums.dto';
 
 export class CvSectionDto {
-  @ApiProperty({ enum: Object.values(CV_SECTIONS) })
+  @ApiProperty({ enum: Object.values(CV_SECTIONS), example: 'summary' })
   @IsString()
   sectionName!: string;
 
-  @ApiProperty({ default: true })
+  @ApiProperty({ default: true, example: true })
   @IsBoolean()
   isEnabled!: boolean;
 
-  @ApiProperty({ example: 1 })
+  @ApiProperty({ example: 2 })
   @IsInt()
   @Min(1)
   displayOrder!: number;
 
-  @ApiProperty({ required: false, description: 'JSON payload for custom content per section' })
+  @ApiProperty({ required: false, description: 'JSON payload for custom content per section', example: { text: 'Short summary...' } })
   @IsOptional()
   @IsObject()
   customContent?: Record<string, any>;

@@ -1,30 +1,35 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString } from 'class-validator';
+import { Type } from 'class-transformer';
+import { IsIn, IsInt, IsOptional, IsString, Min } from 'class-validator';
 import { CV_STATUS } from '../shared/cv.enums.dto';
 
 export class AdminListCvsQueryDto {
-  @ApiPropertyOptional({ enum: Object.values(CV_STATUS) })
+  @ApiPropertyOptional({ enum: Object.values(CV_STATUS), example: CV_STATUS.submitted })
   @IsOptional()
-  @IsString()
+  @IsIn(Object.values(CV_STATUS))
   status?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'applicant-uuid-123' })
   @IsOptional()
   @IsString()
   applicantId?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ example: 'job-uuid-123' })
   @IsOptional()
   @IsString()
   jobId?: string;
 
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
-  @IsString()
-  page?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  page?: number;
 
   @ApiPropertyOptional({ example: 50 })
   @IsOptional()
-  @IsString()
-  pageSize?: string;
+  @Type(() => Number)
+  @IsInt()
+  @Min(1)
+  pageSize?: number;
 }

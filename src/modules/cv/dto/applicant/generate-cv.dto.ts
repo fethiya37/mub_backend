@@ -1,13 +1,13 @@
-import { ApiProperty } from '@nestjs/swagger';
+import { ApiPropertyOptional } from '@nestjs/swagger';
 import { IsOptional, IsString } from 'class-validator';
 
 export class GenerateCvDto {
-  @ApiProperty({ required: false, description: 'If provided, forces regeneration for this cvId' })
+  @ApiPropertyOptional({ required: false, description: 'If provided, forces regeneration for this cvId', example: 'cv-uuid-123' })
   @IsOptional()
   @IsString()
   cvId?: string;
 
-  @ApiProperty({ required: false, description: 'Optional job id (if cvId not provided)' })
+  @ApiPropertyOptional({ required: false, description: 'Optional job id (if cvId not provided)', example: 'job-uuid-123' })
   @IsOptional()
   @IsString()
   jobId?: string;

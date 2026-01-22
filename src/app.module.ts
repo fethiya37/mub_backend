@@ -16,6 +16,7 @@ import { EmployersModule } from './modules/employers/employers.module';
 import { MailModule } from './modules/mail/mail.module';
 import { CvModule } from './modules/cv/cv.module';
 import { VisaModule } from './modules/visa/visa.module';
+import { LocalAgenciesModule } from './modules/local-agencies/local-agencies.module';
 
 @Module({
   imports: [
@@ -37,7 +38,8 @@ import { VisaModule } from './modules/visa/visa.module';
     EmployersModule,
     MailModule,
     CvModule,
-    VisaModule
+    VisaModule,
+    LocalAgenciesModule
   ],
   providers: [...appGuards]
 })

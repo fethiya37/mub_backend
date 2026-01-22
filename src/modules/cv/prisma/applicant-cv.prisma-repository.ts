@@ -1,4 +1,3 @@
-// src/modules/cv/prisma/applicant-cv.prisma-repository.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { ApplicantCvCreate, ApplicantCvRepository } from '../repositories/applicant-cv.repository';
@@ -37,16 +36,21 @@ export class ApplicantCvPrismaRepository extends ApplicantCvRepository {
     });
   }
 
-  async findByApplicant(applicantId: string, page: number, pageSize: number) {
+  async listForAdmin(filters: { status?: string; applicantId?: string; jobId?: string }, page: number, pageSize: number) {
     const skip = (page - 1) * pageSize;
-    const where: any = { applicantId };
+
+    const where: any = {};
+    if (filters.status) where.status = filters.status;
+    if (filters.applicantId) where.applicantId = filters.applicantId;
+    if (filters.jobId) where.jobId = filters.jobId;
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.applicantCv.findMany({
         where,
         orderBy: { updatedAt: 'desc' },
         skip,
-        take: pageSize
+        take: pageSize,
+        include: { template: true }
       }),
       this.prisma.applicantCv.count({ where })
     ]);
@@ -54,9 +58,20 @@ export class ApplicantCvPrismaRepository extends ApplicantCvRepository {
     return { items, total };
   }
 
-  async listForAdmin(filters: { status?: string; applicantId?: string; jobId?: string }, page: number, pageSize: number) {
+  async listForAgency(
+    filters: { status?: string; applicantId?: string; jobId?: string; createdBy?: string },
+    page: number,
+    pageSize: number
+  ) {
     const skip = (page - 1) * pageSize;
-    const where: any = {};
+
+    const where: any = {
+      applicant: {
+        registrationSource: 'AGENCY',
+        createdBy: filters.createdBy ?? undefined
+      }
+    };
+
     if (filters.status) where.status = filters.status;
     if (filters.applicantId) where.applicantId = filters.applicantId;
     if (filters.jobId) where.jobId = filters.jobId;

@@ -1,4 +1,3 @@
-// src/modules/cv/services/cv-status.service.ts
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { CV_STATUS } from '../dto/shared/cv.enums.dto';
 

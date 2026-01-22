@@ -8,6 +8,11 @@ export class AdminListApplicantsQueryDto {
   @IsIn(ApplicantProfileStatuses)
   status?: string;
 
+  @ApiPropertyOptional({ example: 'uuid-local-agency-user-id', description: 'Filter by creator (Local Agency userId)' })
+  @IsOptional()
+  @IsString()
+  createdBy?: string;
+
   @ApiPropertyOptional({ example: 1 })
   @IsOptional()
   @IsString()

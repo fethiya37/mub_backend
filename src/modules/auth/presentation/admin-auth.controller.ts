@@ -12,9 +12,9 @@ import { AuthService } from '../services/auth.service';
 export class AdminAuthController {
   constructor(private readonly auth: AuthService) {}
 
-  @RequirePermissions('USER_MANAGE')
+  @RequirePermissions('USER_CREATE')
   @Post('users')
-  @ApiOperation({ summary: 'Admin creates user and sends Account Setup email (no default password)' })
+  @ApiOperation({ summary: 'Admin creates staff/system user and sends Account Setup email' })
   @ApiResponse({ status: 201, schema: { example: { ok: true, userId: 'uuid' } } })
   adminCreateUser(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminCreateUserDto) {
     return this.auth.adminCreateUser(dto, user.userId);

@@ -1,4 +1,3 @@
-// src/modules/cv/presentation/admin-cv-templates.controller.ts
 import { Body, Controller, Delete, Get, Param, Post, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';

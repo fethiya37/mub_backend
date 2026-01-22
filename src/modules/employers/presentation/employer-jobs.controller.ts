@@ -1,4 +1,3 @@
-
 import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
@@ -14,14 +13,14 @@ import { UpdateJobDto } from '../dto/update-job.dto';
 export class EmployerJobsController {
   constructor(private readonly jobs: EmployerJobsService) {}
 
-  @RequirePermissions('JOB_MANAGE')
+  @RequirePermissions('JOB_CREATE')
   @Post()
   @ApiOperation({ summary: 'Create job (APPROVED employer only)' })
   create(@CurrentUserDecorator() user: CurrentUser, @Body() dto: CreateJobDto) {
     return this.jobs.create(user.userId, dto);
   }
 
-  @RequirePermissions('JOB_MANAGE')
+  @RequirePermissions('JOB_UPDATE')
   @Put(':id')
   @ApiOperation({ summary: 'Update job (own jobs only)' })
   update(@CurrentUserDecorator() user: CurrentUser, @Param('id') id: string, @Body() dto: UpdateJobDto) {

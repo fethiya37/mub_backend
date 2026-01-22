@@ -1,21 +1,19 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
-import { ApplicantProfileRepository } from '../../applicants/repositories/applicant-profile.repository';
-import { JobPostingRepository } from '../../employers/repositories/job-posting.repository';
+import { PrismaService } from '../../../database/prisma.service';
 import { ApplicantCvRepository } from '../repositories/applicant-cv.repository';
 import { ApplicantCvSectionRepository } from '../repositories/applicant-cv-section.repository';
 import { ApplicantCvVersionRepository } from '../repositories/applicant-cv-version.repository';
 import { CvTemplateService } from './cv-template.service';
-import { CvPdfService } from './cv-pdf.service';
 import { CvRenderService } from './cv-render.service';
+import { CvPdfService } from './cv-pdf.service';
 import { FileStorageService } from '../storage/file-storage.service';
 import { CvAuditService } from './cv-audit.service';
-import { CV_SECTIONS } from '../dto/shared/cv.enums.dto';
+import { CV_SECTIONS, CV_STATUS } from '../dto/shared/cv.enums.dto';
 
 @Injectable()
 export class CvGenerationService {
   constructor(
-    private readonly profiles: ApplicantProfileRepository,
-    private readonly jobs: JobPostingRepository,
+    private readonly prisma: PrismaService,
     private readonly templates: CvTemplateService,
     private readonly cvs: ApplicantCvRepository,
     private readonly sectionsRepo: ApplicantCvSectionRepository,
@@ -23,8 +21,15 @@ export class CvGenerationService {
     private readonly render: CvRenderService,
     private readonly pdf: CvPdfService,
     private readonly storage: FileStorageService,
-    private readonly cvAudit: CvAuditService
+    private readonly audit: CvAuditService
   ) {}
+
+  private isoDate(d: any) {
+    if (!d) return null;
+    const dt = d instanceof Date ? d : new Date(d);
+    if (Number.isNaN(dt.getTime())) return null;
+    return dt.toISOString().slice(0, 10);
+  }
 
   private extractKeywords(text: string) {
     const raw = (text || '')
@@ -33,21 +38,7 @@ export class CvGenerationService {
       .split(/\s+/)
       .filter((w) => w.length >= 4);
 
-    const stop = new Set([
-      'with',
-      'have',
-      'will',
-      'this',
-      'that',
-      'from',
-      'your',
-      'they',
-      'their',
-      'able',
-      'must',
-      'work',
-      'role'
-    ]);
+    const stop = new Set(['with', 'have', 'will', 'this', 'that', 'from', 'your', 'they', 'their', 'able', 'must']);
 
     const freq: Record<string, number> = {};
     for (const w of raw) {
@@ -59,13 +50,6 @@ export class CvGenerationService {
       .sort((a, b) => b[1] - a[1])
       .slice(0, 12)
       .map(([w]) => w);
-  }
-
-  private isoDate(d: any) {
-    if (!d) return null;
-    const dt = d instanceof Date ? d : new Date(d);
-    if (Number.isNaN(dt.getTime())) return null;
-    return dt.toISOString().slice(0, 10);
   }
 
   private normalizeResponsibilities(value: any) {
@@ -94,31 +78,40 @@ export class CvGenerationService {
     };
   }
 
-  async generate(applicantId: string, userId: string, input: { cvId?: string; jobId?: string }) {
+  async generate(input: { applicantId: string; performedBy: string; cvId?: string; jobId?: string }) {
     let cv: any | null = null;
 
     if (input.cvId) {
       cv = await this.cvs.findById(input.cvId);
       if (!cv) throw new NotFoundException('CV not found');
-      if (cv.applicantId !== applicantId) throw new BadRequestException('CV not found');
+      if (cv.applicantId !== input.applicantId) throw new BadRequestException('CV not found');
     } else {
       if (!input.jobId) throw new BadRequestException('cvId or jobId required');
 
-      cv = await this.cvs.findByApplicantAndJob(applicantId, input.jobId);
+      cv = await this.cvs.findByApplicantAndJob(input.applicantId, input.jobId);
 
       if (!cv) {
         const template = await this.templates.getDefaultActive();
-        cv = await this.cvs.create({ applicantId, jobId: input.jobId, cvTemplateId: template.id });
+        cv = await this.cvs.create({ applicantId: input.applicantId, jobId: input.jobId, cvTemplateId: template.id });
       }
 
       cv = await this.cvs.findById(cv.id);
       if (!cv) throw new NotFoundException('CV not found');
     }
 
-    const applicant = await this.profiles.findById(applicantId);
+    const applicant = await this.prisma.applicantProfile.findUnique({
+      where: { applicantId: input.applicantId },
+      include: {
+        skills: true,
+        qualifications: true,
+        workExperiences: true,
+        documents: true
+      }
+    });
+
     if (!applicant) throw new NotFoundException('Applicant profile not found');
 
-    const job = cv.jobId ? await this.jobs.findById(cv.jobId) : null;
+    const job = cv.jobId ? await this.prisma.jobPosting.findUnique({ where: { id: cv.jobId } }) : null;
 
     const sections = await this.sectionsRepo.listByCv(cv.id);
 
@@ -177,11 +170,11 @@ export class CvGenerationService {
       payload
     });
 
-    const pdfBuffer: Buffer = await this.pdf.generatePdfFromHtml(html);
+    const pdfBuffer = await this.pdf.generatePdfFromHtml(html);
     const saved = await this.storage.savePdf(pdfBuffer, 'pdf');
 
     const nextVersion = (cv.currentVersion ?? 0) + 1;
-    const isFinal = String(cv.status).toLowerCase() === 'approved';
+    const isFinal = String(cv.status).toLowerCase() === CV_STATUS.approved;
 
     await this.versions.create({
       cvId: cv.id,
@@ -193,7 +186,7 @@ export class CvGenerationService {
 
     await this.cvs.update(cv.id, { currentVersion: nextVersion });
 
-    await this.cvAudit.log(cv.id, 'CV_GENERATED', userId, {
+    await this.audit.log(cv.id, 'CV_GENERATED', input.performedBy, {
       versionNumber: nextVersion,
       jobId: cv.jobId ?? null,
       keywords

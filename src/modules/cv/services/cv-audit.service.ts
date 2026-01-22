@@ -1,4 +1,3 @@
-// src/modules/cv/services/cv-audit.service.ts
 import { Injectable } from '@nestjs/common';
 import { AuditService } from '../../audit/services/audit.service';
 import { CvAuditLogRepository } from '../repositories/cv-audit-log.repository';

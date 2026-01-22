@@ -1,6 +1,6 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsOptional, IsString, ValidateNested, IsEmail } from 'class-validator';
+import { IsArray, IsEmail, IsOptional, IsString, ValidateNested } from 'class-validator';
 import { ApplicantSkillDto } from '../shared/applicant-skill.dto';
 import { ApplicantQualificationDto } from '../shared/applicant-qualification.dto';
 import { ApplicantWorkExperienceDto } from '../shared/applicant-work-experience.dto';
@@ -37,28 +37,40 @@ export class UpdateVerifiedApplicantDto {
   @IsString()
   barcodeValue?: string;
 
-  @ApiPropertyOptional({ type: [ApplicantSkillDto], example: [{ skillName: 'Cooking', proficiencyLevel: 'ADVANCED', yearsOfExperience: 5 }] })
+  @ApiPropertyOptional({
+    type: [ApplicantSkillDto],
+    example: [{ skillName: 'Team Collaboration', proficiencyLevel: 'ADVANCED', yearsOfExperience: 5 }]
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ApplicantSkillDto)
   skills?: ApplicantSkillDto[];
 
-  @ApiPropertyOptional({ type: [ApplicantQualificationDto] })
+  @ApiPropertyOptional({
+    type: [ApplicantQualificationDto],
+    example: [{ qualificationType: 'Safety Training', institution: 'Training Center', country: 'Ethiopia', yearCompleted: 2023 }]
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ApplicantQualificationDto)
   qualifications?: ApplicantQualificationDto[];
 
-  @ApiPropertyOptional({ type: [ApplicantWorkExperienceDto] })
+  @ApiPropertyOptional({
+    type: [ApplicantWorkExperienceDto],
+    example: [{ jobTitle: 'Electrician', employerName: 'XYZ', country: 'UAE', startDate: '2020-01-01', endDate: '2022-12-31' }]
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ApplicantWorkExperienceDto)
   workExperiences?: ApplicantWorkExperienceDto[];
 
-  @ApiPropertyOptional({ type: [ApplicantDocumentDto] })
+  @ApiPropertyOptional({
+    type: [ApplicantDocumentDto],
+    example: [{ documentType: 'OTHER', fileUrl: 'https://files.example.com/applicants/uuid/extra.pdf', verificationStatus: 'PENDING' }]
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

@@ -1,4 +1,4 @@
-import { BadRequestException, ConflictException, Injectable } from '@nestjs/common';
+import { BadRequestException, ConflictException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { ApplicantProfileRepository } from '../repositories/applicant-profile.repository';
 import { ApplicantStatusService } from './applicant-status.service';
 import { ApplicantDraftTokenService } from './applicant-draft-token.service';
@@ -42,6 +42,9 @@ export class ApplicantsService {
       applicationNumber: dto.applicationNumber ?? null,
       barcodeValue: dto.barcodeValue ?? null,
 
+      registrationSource: 'SELF',
+      createdBy: null,
+
       skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
       qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
       workExperiences: dto.workExperiences
@@ -56,6 +59,55 @@ export class ApplicantsService {
 
     const token = await this.draftTokens.rotate(profile.applicantId);
     return { applicantId: profile.applicantId, ...token };
+  }
+
+  async agentDraftUpsert(agentUserId: string, dto: any) {
+    const existing = await this.profiles.findByPhone(dto.phone);
+    if (existing) this.status.ensureDraftEditable(existing.profileStatus);
+
+    this.draftTokens.parseLaborId(dto.gender ?? null, dto.laborId ?? null);
+
+    const passportExpiry = dto.passportExpiry ? new Date(dto.passportExpiry) : null;
+    this.draftTokens.ensurePassportExpiry(passportExpiry);
+
+    const profile = await this.profiles.upsertDraft({
+      phone: dto.phone,
+      email: dto.email ?? null,
+
+      firstName: dto.firstName ?? null,
+      lastName: dto.lastName ?? null,
+      gender: dto.gender ?? null,
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+      nationality: dto.nationality ?? null,
+      region: dto.region ?? null,
+
+      passportNumber: dto.passportNumber ?? null,
+      passportExpiry,
+      laborId: dto.laborId ?? null,
+
+      address: dto.address ?? null,
+      maritalStatus: dto.maritalStatus ?? null,
+
+      visaNumber: dto.visaNumber ?? null,
+      applicationNumber: dto.applicationNumber ?? null,
+      barcodeValue: dto.barcodeValue ?? null,
+
+      registrationSource: 'AGENCY',
+      createdBy: agentUserId,
+
+      skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
+      qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
+      workExperiences: dto.workExperiences
+        ? dto.workExperiences.map((w: any) => ({
+            ...w,
+            startDate: w.startDate ? new Date(w.startDate) : null,
+            endDate: w.endDate ? new Date(w.endDate) : null
+          }))
+        : undefined,
+      documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
+    });
+
+    return { ok: true, applicantId: profile.applicantId };
   }
 
   async issueDraftToken(phone: string, passportNumber?: string) {
@@ -106,6 +158,9 @@ export class ApplicantsService {
       applicationNumber: dto.applicationNumber ?? profile.applicationNumber,
       barcodeValue: dto.barcodeValue ?? profile.barcodeValue,
 
+      registrationSource: profile.registrationSource ?? 'SELF',
+      createdBy: profile.createdBy ?? null,
+
       skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
       qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
       workExperiences: dto.workExperiences
@@ -155,6 +210,43 @@ export class ApplicantsService {
 
     await this.profiles.setStatus(applicantId, 'SUBMITTED', { submittedAt: new Date(), rejectionReason: null });
     await this.draftTokens.markUsed(draftTokenRecordId);
+
+    return { ok: true, applicantId };
+  }
+
+  async agentList(agentUserId: string, status: string | undefined, page: number, pageSize: number) {
+    return this.profiles.listByCreator(agentUserId, status, page, pageSize);
+  }
+
+  async agentSubmit(agentUserId: string, applicantId: string) {
+    const profile = await this.profiles.findById(applicantId);
+    if (!profile) throw new NotFoundException('Applicant not found');
+    if (profile.createdBy !== agentUserId) throw new ForbiddenException('Not allowed');
+
+    this.status.ensureCanSubmit(profile.profileStatus);
+
+    const missingProfile =
+      !profile.firstName ||
+      !profile.lastName ||
+      !profile.gender ||
+      !profile.region ||
+      !profile.nationality ||
+      !profile.passportNumber ||
+      !profile.passportExpiry ||
+      !profile.laborId ||
+      !profile.phone;
+
+    if (missingProfile) throw new BadRequestException('Missing required profile fields');
+
+    this.draftTokens.parseLaborId(profile.gender ?? null, profile.laborId ?? null);
+    this.draftTokens.ensurePassportExpiry(profile.passportExpiry ?? null);
+
+    const docTypes = new Set((profile.documents ?? []).map((d: any) => d.documentType));
+    const requiredDocs = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE', 'LABOR_ID'];
+    const missingDocs = requiredDocs.filter((t) => !docTypes.has(t));
+    if (missingDocs.length) throw new BadRequestException(`Missing required documents: ${missingDocs.join(', ')}`);
+
+    await this.profiles.setStatus(applicantId, 'SUBMITTED', { submittedAt: new Date(), rejectionReason: null });
 
     return { ok: true, applicantId };
   }

@@ -1,6 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsDateString, IsEmail, IsIn, IsOptional, IsString, MinLength, ValidateNested, IsArray } from 'class-validator';
+import { IsArray, IsDateString, IsEmail, IsIn, IsOptional, IsString, MinLength, ValidateNested } from 'class-validator';
 import { ApplicantSkillDto } from '../shared/applicant-skill.dto';
 import { ApplicantQualificationDto } from '../shared/applicant-qualification.dto';
 import { ApplicantWorkExperienceDto } from '../shared/applicant-work-experience.dto';
@@ -59,12 +59,12 @@ export class DraftUpsertApplicantDto {
   @IsDateString()
   passportExpiry?: string;
 
-  @ApiPropertyOptional({ example: 'EF12345678' })
+  @ApiPropertyOptional({ example: 'EF12345678', description: 'EF######## for FEMALE, EM######## for MALE' })
   @IsOptional()
   @IsString()
   laborId?: string;
 
-  @ApiPropertyOptional({ example: 'Addis Ababa, Ethiopia' })
+  @ApiPropertyOptional({ example: 'Bole, Addis Ababa, Ethiopia' })
   @IsOptional()
   @IsString()
   address?: string;
@@ -89,21 +89,42 @@ export class DraftUpsertApplicantDto {
   @IsString()
   barcodeValue?: string;
 
-  @ApiPropertyOptional({ type: [ApplicantSkillDto], example: [{ skillName: 'Cooking', proficiencyLevel: 'INTERMEDIATE', yearsOfExperience: 3 }] })
+  @ApiPropertyOptional({
+    type: [ApplicantSkillDto],
+    example: [
+      { skillName: 'Electrical Wiring & Installation', proficiencyLevel: 'ADVANCED', yearsOfExperience: 6 },
+      { skillName: 'Troubleshooting', proficiencyLevel: 'INTERMEDIATE', yearsOfExperience: 4 }
+    ]
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ApplicantSkillDto)
   skills?: ApplicantSkillDto[];
 
-  @ApiPropertyOptional({ type: [ApplicantQualificationDto], example: [{ qualificationType: 'COC Level III', institution: 'TVET', country: 'Ethiopia', yearCompleted: 2022 }] })
+  @ApiPropertyOptional({
+    type: [ApplicantQualificationDto],
+    example: [{ qualificationType: 'COC Level III', institution: 'TVET', country: 'Ethiopia', yearCompleted: 2022 }]
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ApplicantQualificationDto)
   qualifications?: ApplicantQualificationDto[];
 
-  @ApiPropertyOptional({ type: [ApplicantWorkExperienceDto], example: [{ jobTitle: 'Housekeeper', employerName: 'Private', country: 'Saudi Arabia', startDate: '2021-01-01', endDate: '2023-01-01' }] })
+  @ApiPropertyOptional({
+    type: [ApplicantWorkExperienceDto],
+    example: [
+      {
+        jobTitle: 'Construction Electrician',
+        employerName: 'ABC Construction PLC',
+        country: 'Ethiopia',
+        startDate: '2019-01-01',
+        endDate: '2024-06-01',
+        responsibilities: 'Installed and maintained wiring, troubleshooting, ensured safety compliance.'
+      }
+    ]
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -113,10 +134,10 @@ export class DraftUpsertApplicantDto {
   @ApiPropertyOptional({
     type: [ApplicantDocumentDto],
     example: [
-      { documentType: 'PASSPORT', fileUrl: 'https://files.example.com/passport.pdf' },
-      { documentType: 'PERSONAL_PHOTO', fileUrl: 'https://files.example.com/photo.jpg' },
-      { documentType: 'COC_CERTIFICATE', fileUrl: 'https://files.example.com/coc.pdf' },
-      { documentType: 'LABOR_ID', fileUrl: 'https://files.example.com/labor-id.pdf' }
+      { documentType: 'PASSPORT', fileUrl: 'https://files.example.com/applicants/uuid/passport.pdf' },
+      { documentType: 'PERSONAL_PHOTO', fileUrl: 'https://files.example.com/applicants/uuid/photo.jpg' },
+      { documentType: 'COC_CERTIFICATE', fileUrl: 'https://files.example.com/applicants/uuid/coc.pdf' },
+      { documentType: 'LABOR_ID', fileUrl: 'https://files.example.com/applicants/uuid/labor-id.pdf' }
     ]
   })
   @IsOptional()

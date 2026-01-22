@@ -5,6 +5,7 @@ import { AuthModule } from '../auth/auth.module';
 import { PublicApplicantsController } from './presentation/public-applicants.controller';
 import { AdminApplicantsController } from './presentation/admin-applicants.controller';
 import { ApplicantProfileController } from './presentation/applicant-profile.controller';
+import { AgentApplicantsController } from './presentation/agent-applicants.controller';
 import { ApplicantProfileRepository } from './repositories/applicant-profile.repository';
 import { ApplicantDraftTokenRepository } from './repositories/applicant-draft-token.repository';
 import { ApplicantProfilePrismaRepository } from './prisma/applicant-profile.prisma-repository';
@@ -18,7 +19,7 @@ import { DraftTokenGuard } from './guards/draft-token.guard';
 
 @Module({
   imports: [UsersModule, AuthModule],
-  controllers: [PublicApplicantsController, AdminApplicantsController, ApplicantProfileController],
+  controllers: [PublicApplicantsController, AdminApplicantsController, ApplicantProfileController, AgentApplicantsController],
   providers: [
     PrismaService,
     ApplicantStatusService,

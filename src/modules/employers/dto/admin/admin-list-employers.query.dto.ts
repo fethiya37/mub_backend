@@ -9,7 +9,7 @@ export class AdminListEmployersQueryDto {
   @IsIn(EmployerStatuses)
   status?: string;
 
-  @ApiPropertyOptional({ example: 'UAE' })
+  @ApiPropertyOptional({ example: 'United Arab Emirates' })
   @IsOptional()
   @IsString()
   country?: string;

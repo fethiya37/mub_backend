@@ -14,14 +14,14 @@ export class PublicApplicantsController {
   constructor(private readonly applicants: ApplicantsService) {}
 
   @Put('draft')
-  @ApiOperation({ summary: 'Create or update draft profile (nested arrays allowed) and rotate Draft token' })
+  @ApiOperation({ summary: 'Create or update draft profile (SELF) and rotate Draft token' })
   @ApiResponse({
     status: 200,
     schema: {
       example: {
-        applicantId: 'uuid',
-        draftToken: 'token',
-        draftTokenExpiresAt: '2025-12-31T00:00:00.000Z'
+        applicantId: 'uuid-applicant-id',
+        draftToken: 'base64url-token',
+        draftTokenExpiresAt: '2026-01-23T10:00:00.000Z'
       }
     }
   })
@@ -31,6 +31,10 @@ export class PublicApplicantsController {
 
   @Post('draft-token')
   @ApiOperation({ summary: 'Re-issue Draft token for DRAFT/REJECTED (optional passportNumber match)' })
+  @ApiResponse({
+    status: 200,
+    schema: { example: { applicantId: 'uuid-applicant-id', draftToken: 'base64url-token', draftTokenExpiresAt: '2026-01-23T10:00:00.000Z' } }
+  })
   issueDraftToken(@Body() dto: IssueDraftTokenDto) {
     return this.applicants.issueDraftToken(dto.phone, dto.passportNumber);
   }
@@ -47,6 +51,7 @@ export class PublicApplicantsController {
   @ApiSecurity('draft')
   @Put('draft/me')
   @ApiOperation({ summary: 'Update draft using Draft token and rotate token' })
+  @ApiResponse({ status: 200, schema: { example: { ok: true, draftToken: 'base64url-token', draftTokenExpiresAt: '2026-01-23T10:00:00.000Z' } } })
   updateDraft(@Req() req: any, @Body() dto: DraftUpsertApplicantDto) {
     return this.applicants.draftUpdate(req.applicantId, dto);
   }
@@ -54,7 +59,8 @@ export class PublicApplicantsController {
   @UseGuards(DraftTokenGuard)
   @ApiSecurity('draft')
   @Post('submit')
-  @ApiOperation({ summary: 'Submit draft for admin review (DRAFT → SUBMITTED)' })
+  @ApiOperation({ summary: 'Submit draft for admin review (DRAFT/REJECTED → SUBMITTED)' })
+  @ApiResponse({ status: 200, schema: { example: { ok: true, applicantId: 'uuid-applicant-id' } } })
   submit(@Req() req: any, @Body() _dto: SubmitApplicantDto) {
     return this.applicants.submit(req.applicantId, req.draftTokenRecordId);
   }

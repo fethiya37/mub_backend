@@ -31,13 +31,15 @@ model User {
   employerApprovalLogs EmployerApprovalLog[]
   cvAdminReviews       CvAdminReview[]
 
-  visaAssignedAsCaseOfficer VisaApplication[]     @relation("VisaAssignedCaseOfficer")
-  visaSubmittedByMe         VisaApplication[]     @relation("VisaSubmittedByAdmin")
+  visaAssignedAsCaseOfficer VisaApplication[]        @relation("VisaAssignedCaseOfficer")
+  visaSubmittedByMe         VisaApplication[]        @relation("VisaSubmittedByAdmin")
   visaStatusHistories       VisaStatusHistory[]
-  visaDocsUploadedByMe      VisaDocument[]        @relation("VisaDocUploadedBy")
-  visaDocsVerifiedByMe      VisaDocument[]        @relation("VisaDocVerifiedBy")
+  visaDocsUploadedByMe      VisaDocument[]           @relation("VisaDocUploadedBy")
+  visaDocsVerifiedByMe      VisaDocument[]           @relation("VisaDocVerifiedBy")
   visaComplianceChecks      VisaComplianceCheck[]
   visaNotifications         VisaNotification[]
+  localAgency               LocalAgency?
+  localAgencyApprovalLogs   LocalAgencyApprovalLog[] @relation("LocalAgencyActionBy")
 }
 
 model Role {
@@ -138,6 +140,63 @@ model AuditLog {
   @@index([action])
 }
 
+enum LocalAgencyStatus {
+  PENDING
+  APPROVED
+  REJECTED
+  SUSPENDED
+}
+
+enum LocalAgencyApprovalAction {
+  APPROVED
+  REJECTED
+  SUSPENDED
+  REACTIVATED
+}
+
+model LocalAgency {
+  id            String            @id @default(uuid())
+  name          String
+  licenseNumber String            @unique
+  contactPerson String?
+  phone         String?
+  email         String?
+  status        LocalAgencyStatus @default(PENDING)
+
+  userId String? @unique
+  user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  rejectionReason String?
+  approvedBy      String?
+  approvedAt      DateTime?
+  suspendedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  approvalLogs LocalAgencyApprovalLog[]
+
+  @@index([status])
+  @@index([licenseNumber])
+  @@index([phone])
+  @@index([email])
+}
+
+model LocalAgencyApprovalLog {
+  id         String                    @id @default(uuid())
+  agencyId   String
+  action     LocalAgencyApprovalAction
+  reason     String?
+  actionBy   String
+  actionDate DateTime                  @default(now())
+
+  agency LocalAgency @relation(fields: [agencyId], references: [id], onDelete: Cascade)
+  admin  User        @relation("LocalAgencyActionBy", fields: [actionBy], references: [id], onDelete: Cascade)
+
+  @@index([agencyId])
+  @@index([actionDate])
+}
+
 enum ApplicantProfileStatus {
   DRAFT
   SUBMITTED
@@ -151,6 +210,12 @@ enum ApplicantDocumentType {
   COC_CERTIFICATE
   LABOR_ID
   OTHER
+}
+
+enum ApplicantRegistrationSource {
+  SELF
+  AGENCY
+  MUB_STAFF
 }
 
 model ApplicantProfile {
@@ -175,6 +240,9 @@ model ApplicantProfile {
   visaNumber        String?
   applicationNumber String?
   barcodeValue      String?
+
+  registrationSource ApplicantRegistrationSource @default(SELF)
+  createdBy          String?
 
   profileStatus ApplicantProfileStatus @default(DRAFT)
 
@@ -201,7 +269,10 @@ model ApplicantProfile {
   @@index([passportNumber])
   @@index([profileStatus])
   @@index([laborId])
+  @@index([registrationSource])
+  @@index([createdBy])
 }
+
 
 model ApplicantDocument {
   id                 String                @id @default(uuid())

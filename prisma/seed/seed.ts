@@ -1,8 +1,8 @@
-import "dotenv/config";
-import { PrismaClient } from "@prisma/client";
-import { PrismaPg } from "@prisma/adapter-pg";
-import { seedRbac } from "./seed.rbac";
-import { seedAdmin } from "./seed.admin";
+import 'dotenv/config';
+import { PrismaClient } from '@prisma/client';
+import { PrismaPg } from '@prisma/adapter-pg';
+import { seedRbac } from './seed.rbac';
+import { seedAdmin } from './seed.admin';
 
 const adapter = new PrismaPg({ connectionString: process.env.DATABASE_URL! });
 const prisma = new PrismaClient({ adapter });

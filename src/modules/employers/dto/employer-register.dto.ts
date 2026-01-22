@@ -7,7 +7,7 @@ export class EmployerRegisterDto {
   @MinLength(2)
   organizationName!: string;
 
-  @ApiProperty({ example: 'UAE' })
+  @ApiProperty({ example: 'United Arab Emirates' })
   @IsString()
   @MinLength(2)
   country!: string;

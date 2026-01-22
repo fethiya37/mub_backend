@@ -3,6 +3,7 @@ import { PERMISSIONS, ROLES, ROLE_PERMISSIONS } from './permissions.catalog';
 
 export async function seedRbac(prisma: PrismaClient) {
   const roles = Object.values(ROLES);
+
   for (const name of roles) {
     await prisma.role.upsert({
       where: { name },
@@ -23,7 +24,12 @@ export async function seedRbac(prisma: PrismaClient) {
     const role = await prisma.role.findUnique({ where: { name: roleName } });
     if (!role) continue;
 
-    const permissions = await prisma.permission.findMany({ where: { code: { in: codes } } });
+    const codesList = Array.from(codes) as string[];
+
+    const permissions = await prisma.permission.findMany({
+      where: { code: { in: codesList } }
+    });
+
     for (const p of permissions) {
       await prisma.rolePermission.upsert({
         where: { roleId_permissionId: { roleId: role.id, permissionId: p.id } },

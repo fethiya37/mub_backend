@@ -1,4 +1,3 @@
-// src/modules/cv/prisma/applicant-cv-section.prisma-repository.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { ApplicantCvSectionRepository, CvSectionUpsert } from '../repositories/applicant-cv-section.repository';
@@ -12,17 +11,18 @@ export class ApplicantCvSectionPrismaRepository extends ApplicantCvSectionReposi
   async replaceAll(cvId: string, sections: CvSectionUpsert[]) {
     await this.prisma.$transaction(async (tx) => {
       await tx.applicantCvSection.deleteMany({ where: { cvId } });
-      if (sections.length) {
-        await tx.applicantCvSection.createMany({
-          data: sections.map((s) => ({
-            cvId,
-            sectionName: s.sectionName,
-            isEnabled: s.isEnabled,
-            displayOrder: s.displayOrder,
-            customContent: s.customContent ?? undefined
-          }))
-        });
-      }
+
+      if (!sections.length) return;
+
+      await tx.applicantCvSection.createMany({
+        data: sections.map((s) => ({
+          cvId,
+          sectionName: s.sectionName,
+          isEnabled: s.isEnabled,
+          displayOrder: s.displayOrder,
+          customContent: s.customContent ?? undefined
+        }))
+      });
     });
   }
 

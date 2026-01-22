@@ -7,7 +7,7 @@ export class ApplicantVerifiedService {
   constructor(private readonly profiles: ApplicantProfileRepository, private readonly status: ApplicantStatusService) {}
 
   async getByUserId(userId: string) {
-    const profile = await (this.profiles as any).prisma?.applicantProfile?.findFirst?.({ where: { userId } });
+    const profile = await this.profiles.findByUserId(userId);
     if (profile) return profile;
     throw new BadRequestException('Applicant profile not found for user');
   }

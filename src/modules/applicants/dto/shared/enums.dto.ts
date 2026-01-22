@@ -9,6 +9,9 @@ export type ApplicantDocumentType = (typeof ApplicantDocumentTypes)[number];
 export const Genders = ['MALE', 'FEMALE'] as const;
 export type Gender = (typeof Genders)[number];
 
+export const ApplicantRegistrationSources = ['SELF', 'AGENCY', 'MUB_STAFF'] as const;
+export type ApplicantRegistrationSource = (typeof ApplicantRegistrationSources)[number];
+
 export class EnumsDoc {
   @ApiProperty({ example: ApplicantProfileStatuses })
   profileStatuses!: typeof ApplicantProfileStatuses;
@@ -18,4 +21,7 @@ export class EnumsDoc {
 
   @ApiProperty({ example: Genders })
   genders!: typeof Genders;
+
+  @ApiProperty({ example: ApplicantRegistrationSources })
+  registrationSources!: typeof ApplicantRegistrationSources;
 }

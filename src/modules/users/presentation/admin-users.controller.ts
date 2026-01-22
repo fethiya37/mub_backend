@@ -9,7 +9,7 @@ import { UsersService } from '../services/users.service';
 export class AdminUsersController {
   constructor(private readonly users: UsersService) {}
 
-  @RequirePermissions('USER_MANAGE')
+  @RequirePermissions('USER_READ')
   @Get()
   @ApiOperation({ summary: 'List users (paged)' })
   @ApiResponse({ status: 200 })
@@ -17,7 +17,7 @@ export class AdminUsersController {
     return this.users.list(page ? Number(page) : 1, pageSize ? Number(pageSize) : 50);
   }
 
-  @RequirePermissions('USER_MANAGE')
+  @RequirePermissions('USER_READ')
   @Get(':id')
   @ApiOperation({ summary: 'Get user by id' })
   @ApiResponse({ status: 200 })
@@ -25,7 +25,7 @@ export class AdminUsersController {
     return this.users.get(id);
   }
 
-  @RequirePermissions('USER_MANAGE')
+  @RequirePermissions('USER_REACTIVATE')
   @Patch(':id/activate')
   @ApiOperation({ summary: 'Activate user (bumps tokenVersion)' })
   @ApiResponse({ status: 200, schema: { example: { ok: true } } })
@@ -33,7 +33,7 @@ export class AdminUsersController {
     return this.users.setActive(id, true);
   }
 
-  @RequirePermissions('USER_MANAGE')
+  @RequirePermissions('USER_SUSPEND')
   @Patch(':id/deactivate')
   @ApiOperation({ summary: 'Deactivate user (bumps tokenVersion)' })
   @ApiResponse({ status: 200, schema: { example: { ok: true } } })

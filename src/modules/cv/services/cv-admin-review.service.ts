@@ -1,4 +1,3 @@
-// src/modules/cv/services/cv-admin-review.service.ts
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { ApplicantCvRepository } from '../repositories/applicant-cv.repository';
 import { CvAdminReviewRepository } from '../repositories/cv-admin-review.repository';
@@ -14,8 +13,18 @@ export class CvAdminReviewService {
     private readonly cvAudit: CvAuditService
   ) {}
 
-  list(filters: any, page: number, pageSize: number) {
+  listAdmin(filters: any, page: number, pageSize: number) {
     return this.cvs.listForAdmin(filters, page, pageSize);
+  }
+
+  listAgency(filters: any, page: number, pageSize: number) {
+    return this.cvs.listForAgency(filters, page, pageSize);
+  }
+
+  async getCv(cvId: string) {
+    const cv = await this.cvs.findById(cvId);
+    if (!cv) throw new NotFoundException('CV not found');
+    return cv;
   }
 
   async updateStatus(adminId: string, cvId: string, dto: any) {

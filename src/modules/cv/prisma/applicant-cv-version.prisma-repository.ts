@@ -1,4 +1,3 @@
-// src/modules/cv/prisma/applicant-cv-version.prisma-repository.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { ApplicantCvVersionRepository, CvVersionCreate } from '../repositories/applicant-cv-version.repository';
@@ -11,13 +10,6 @@ export class ApplicantCvVersionPrismaRepository extends ApplicantCvVersionReposi
 
   create(input: CvVersionCreate) {
     return this.prisma.applicantCvVersion.create({ data: input as any });
-  }
-
-  listByCv(cvId: string) {
-    return this.prisma.applicantCvVersion.findMany({
-      where: { cvId },
-      orderBy: { versionNumber: 'desc' }
-    });
   }
 
   listByApplicant(applicantId: string) {

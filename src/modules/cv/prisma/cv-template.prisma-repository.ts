@@ -1,4 +1,3 @@
-// src/modules/cv/prisma/cv-template.prisma-repository.ts
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { CvTemplateCreate, CvTemplateRepository } from '../repositories/cv-template.repository';
