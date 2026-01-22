@@ -15,7 +15,7 @@ import { ApplicantsModule } from './modules/applicants/applicants.module';
 import { EmployersModule } from './modules/employers/employers.module';
 import { MailModule } from './modules/mail/mail.module';
 import { CvModule } from './modules/cv/cv.module';
-import { VisaModule } from './modules/visa/visa.module';
+import { VisasModule } from './modules/visa/visa.module';
 import { LocalAgenciesModule } from './modules/local-agencies/local-agencies.module';
 
 @Module({
@@ -38,7 +38,7 @@ import { LocalAgenciesModule } from './modules/local-agencies/local-agencies.mod
     EmployersModule,
     MailModule,
     CvModule,
-    VisaModule,
+    VisasModule,
     LocalAgenciesModule
   ],
   providers: [...appGuards]
