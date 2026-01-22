@@ -3,41 +3,45 @@ import { VisaNotificationRepository } from '../repositories/visa-notification.re
 
 @Injectable()
 export class VisaNotificationsService {
-  constructor(private readonly repo: VisaNotificationRepository) {}
+  constructor(private readonly notifications: VisaNotificationRepository) {}
 
-  statusUpdate(visaId: string, adminUserId: string | null | undefined, message: string) {
-    return this.repo.create({
-      visaApplicationId: visaId,
-      adminUserId: adminUserId ?? null,
+  statusUpdate(visaApplicationId: string, adminUserId: string | null, message: string) {
+    return this.notifications.create({
+      visaApplicationId,
+      adminUserId,
       notificationType: 'STATUS_UPDATE',
       message
     });
   }
 
-  documentRequest(visaId: string, adminUserId: string | null | undefined, message: string) {
-    return this.repo.create({
-      visaApplicationId: visaId,
-      adminUserId: adminUserId ?? null,
+  documentRequest(visaApplicationId: string, adminUserId: string | null, message: string) {
+    return this.notifications.create({
+      visaApplicationId,
+      adminUserId,
       notificationType: 'DOCUMENT_REQUEST',
       message
     });
   }
 
-  decisionRecorded(visaId: string, adminUserId: string | null | undefined, message: string) {
-    return this.repo.create({
-      visaApplicationId: visaId,
-      adminUserId: adminUserId ?? null,
+  decisionRecorded(visaApplicationId: string, adminUserId: string | null, message: string) {
+    return this.notifications.create({
+      visaApplicationId,
+      adminUserId,
       notificationType: 'DECISION_RECORDED',
       message
     });
   }
 
-  expiryAlert(visaId: string, adminUserId: string | null | undefined, message: string) {
-    return this.repo.create({
-      visaApplicationId: visaId,
-      adminUserId: adminUserId ?? null,
+  expiryAlert(visaApplicationId: string, adminUserId: string | null, message: string) {
+    return this.notifications.create({
+      visaApplicationId,
+      adminUserId,
       notificationType: 'EXPIRY_ALERT',
       message
     });
+  }
+
+  listByVisa(visaApplicationId: string) {
+    return this.notifications.listByVisa(visaApplicationId);
   }
 }

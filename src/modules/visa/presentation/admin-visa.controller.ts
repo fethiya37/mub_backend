@@ -1,5 +1,5 @@
 import { Body, Controller, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { CurrentUserDecorator } from '../../../common/decorators/current-user.decorator';
 import type { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -20,7 +20,7 @@ import { AdminUpdateComplianceCheckDto } from '../dto/admin/admin-update-complia
 @ApiTags('Admin Visas')
 @ApiBearerAuth()
 @Controller('api/admin/visas')
-export class AdminVisaController {
+export class AdminVisasController {
   constructor(
     private readonly visas: VisasService,
     private readonly docs: VisaDocumentsService,
@@ -34,9 +34,9 @@ export class AdminVisaController {
     return this.visas.createDraft(user.userId, dto);
   }
 
-  @RequirePermissions('VISA_VIEW_ALL')
+  @RequirePermissions('VISA_VIEW')
   @Get()
-  @ApiOperation({ summary: 'List visas with filters (paged)' })
+  @ApiOperation({ summary: 'List visas (paged, filters)' })
   @ApiQuery({ name: 'status', required: false })
   list(@Query() q: AdminListVisasQueryDto) {
     return this.visas.list(
@@ -53,9 +53,9 @@ export class AdminVisaController {
     );
   }
 
-  @RequirePermissions('VISA_VIEW_ALL')
+  @RequirePermissions('VISA_VIEW')
   @Get(':visaId')
-  @ApiOperation({ summary: 'Get visa application details' })
+  @ApiOperation({ summary: 'Get visa details' })
   get(@Param('visaId') visaId: string) {
     return this.visas.get(visaId);
   }
@@ -69,14 +69,14 @@ export class AdminVisaController {
 
   @RequirePermissions('VISA_SUBMIT')
   @Post(':visaId/submit')
-  @ApiOperation({ summary: 'Submit visa (DRAFT -> SUBMITTED) after document + compliance validation' })
+  @ApiOperation({ summary: 'Submit visa (DRAFT -> SUBMITTED)' })
   submit(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminSubmitVisaDto) {
     return this.visas.submit(visaId, user.userId, dto);
   }
 
   @RequirePermissions('VISA_STATUS_UPDATE')
   @Patch(':visaId/status')
-  @ApiOperation({ summary: 'Update visa status (state machine enforced)' })
+  @ApiOperation({ summary: 'Update visa status (state machine)' })
   updateStatus(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpdateVisaStatusDto) {
     return this.visas.updateStatus(visaId, user.userId, dto);
   }
@@ -84,48 +84,48 @@ export class AdminVisaController {
   @RequirePermissions('VISA_DECIDE')
   @Patch(':visaId/decision')
   @ApiOperation({ summary: 'Record decision (approve/reject)' })
-  recordDecision(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminRecordVisaDecisionDto) {
+  decision(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminRecordVisaDecisionDto) {
     return this.visas.recordDecision(visaId, user.userId, dto);
   }
 
   @RequirePermissions('VISA_DOCUMENT_UPLOAD')
   @Post(':visaId/documents')
-  @ApiOperation({ summary: 'Upload visa document (creates new version, deactivates previous)' })
+  @ApiOperation({ summary: 'Upload visa document (versioned)' })
   uploadDoc(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUploadVisaDocumentDto) {
     return this.docs.upload(visaId, user.userId, dto);
   }
 
   @RequirePermissions('VISA_DOCUMENT_VERIFY')
   @Patch('documents/:documentId/verify')
-  @ApiOperation({ summary: 'Verify or reject a visa document' })
+  @ApiOperation({ summary: 'Verify/reject visa document' })
   verifyDoc(@Param('documentId') documentId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminVerifyVisaDocumentDto) {
     return this.docs.verify(documentId, user.userId, dto);
   }
 
   @RequirePermissions('VISA_COMPLIANCE_CHECK')
   @Post(':visaId/compliance')
-  @ApiOperation({ summary: 'Add compliance requirement/check entry' })
+  @ApiOperation({ summary: 'Add compliance check' })
   addCompliance(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminAddComplianceCheckDto) {
     return this.compliance.add(visaId, user.userId, dto);
   }
 
   @RequirePermissions('VISA_COMPLIANCE_CHECK')
   @Patch('compliance/:checkId')
-  @ApiOperation({ summary: 'Update compliance requirement status' })
+  @ApiOperation({ summary: 'Update compliance check status' })
   updateCompliance(@Param('checkId') checkId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpdateComplianceCheckDto) {
     return this.compliance.update(checkId, user.userId, dto);
   }
 
-  @RequirePermissions('VISA_VIEW_ALL')
+  @RequirePermissions('VISA_VIEW')
   @Get(':visaId/documents')
   @ApiOperation({ summary: 'List visa documents' })
   listDocs(@Param('visaId') visaId: string) {
     return this.docs.list(visaId);
   }
 
-  @RequirePermissions('VISA_VIEW_ALL')
+  @RequirePermissions('VISA_VIEW')
   @Get(':visaId/compliance')
-  @ApiOperation({ summary: 'List compliance checks' })
+  @ApiOperation({ summary: 'List visa compliance checks' })
   listCompliance(@Param('visaId') visaId: string) {
     return this.compliance.listByVisa(visaId);
   }

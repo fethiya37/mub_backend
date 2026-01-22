@@ -21,7 +21,15 @@ export class VisaApplicationPrismaRepository extends VisaApplicationRepository {
         remarks: input.remarks ?? null,
         status: 'DRAFT'
       },
-      include: { documents: true, compliance: true }
+      include: {
+        applicant: true,
+        job: true,
+        employer: true,
+        documents: { orderBy: [{ documentType: 'asc' }, { versionNumber: 'desc' }] },
+        compliance: { orderBy: { createdAt: 'asc' } },
+        statusHistory: { orderBy: { changedAt: 'desc' } },
+        notifications: { orderBy: { createdAt: 'desc' } }
+      }
     });
   }
 
@@ -29,9 +37,13 @@ export class VisaApplicationPrismaRepository extends VisaApplicationRepository {
     return this.prisma.visaApplication.findUnique({
       where: { id },
       include: {
+        applicant: true,
+        job: true,
+        employer: true,
         documents: { orderBy: [{ documentType: 'asc' }, { versionNumber: 'desc' }] },
         compliance: { orderBy: { createdAt: 'asc' } },
-        statusHistory: { orderBy: { changedAt: 'desc' } }
+        statusHistory: { orderBy: { changedAt: 'desc' } },
+        notifications: { orderBy: { createdAt: 'desc' } }
       }
     });
   }
@@ -40,20 +52,53 @@ export class VisaApplicationPrismaRepository extends VisaApplicationRepository {
     return this.prisma.visaApplication.update({
       where: { id },
       data: patch as any,
-      include: { documents: true, compliance: true }
+      include: {
+        applicant: true,
+        job: true,
+        employer: true,
+        documents: { orderBy: [{ documentType: 'asc' }, { versionNumber: 'desc' }] },
+        compliance: { orderBy: { createdAt: 'asc' } },
+        statusHistory: { orderBy: { changedAt: 'desc' } },
+        notifications: { orderBy: { createdAt: 'desc' } }
+      }
+    });
+  }
+
+  setStatus(id: string, nextStatus: string, patch: VisaApplicationUpdate) {
+    return this.prisma.visaApplication.update({
+      where: { id },
+      data: { status: nextStatus as any, ...patch } as any
     });
   }
 
   async list(filters: any, page: number, pageSize: number) {
     const skip = (page - 1) * pageSize;
-    const where: any = {};
 
+    const where: any = {};
     if (filters.status) where.status = filters.status;
     if (filters.applicantId) where.applicantId = filters.applicantId;
     if (filters.employerId) where.employerId = filters.employerId;
     if (filters.jobId) where.jobId = filters.jobId;
     if (filters.destinationCountry) where.destinationCountry = { contains: filters.destinationCountry, mode: 'insensitive' };
     if (filters.visaType) where.visaType = { contains: filters.visaType, mode: 'insensitive' };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.visaApplication.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: pageSize
+      }),
+      this.prisma.visaApplication.count({ where })
+    ]);
+
+    return { items, total };
+  }
+
+  async listByApplicant(applicantId: string, status: string | undefined, page: number, pageSize: number) {
+    const skip = (page - 1) * pageSize;
+    const where: any = { applicantId };
+    if (status) where.status = status;
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.visaApplication.findMany({
@@ -79,33 +124,5 @@ export class VisaApplicationPrismaRepository extends VisaApplicationRepository {
       },
       orderBy: { createdAt: 'desc' }
     });
-  }
-
-  setStatus(id: string, nextStatus: string, patch: any) {
-    return this.prisma.visaApplication.update({
-      where: { id },
-      data: {
-        status: nextStatus as any,
-        ...patch
-      }
-    });
-  }
-
-  async listByApplicant(applicantId: string, status: string | undefined, page: number, pageSize: number) {
-    const skip = (page - 1) * pageSize;
-    const where: any = { applicantId };
-    if (status) where.status = status;
-
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.visaApplication.findMany({
-        where,
-        orderBy: { updatedAt: 'desc' },
-        skip,
-        take: pageSize
-      }),
-      this.prisma.visaApplication.count({ where })
-    ]);
-
-    return { items, total };
   }
 }

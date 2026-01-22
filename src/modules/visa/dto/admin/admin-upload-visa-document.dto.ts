@@ -12,7 +12,7 @@ export class AdminUploadVisaDocumentDto {
   @MinLength(5)
   fileUrl!: string;
 
-  @ApiProperty({ required: false, description: 'Optional file checksum' })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   fileHash?: string;

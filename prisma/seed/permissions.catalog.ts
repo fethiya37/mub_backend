@@ -171,6 +171,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICANT_DOCUMENT_UPLOAD',
 
     'PLACEMENT_VIEW',
+    'VISA_VIEW',
 
     'COMMUNICATION_SEND',
     'NOTIFICATION_SEND'
@@ -199,6 +200,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'EMPLOYER_SELF_REGISTER',
     'EMPLOYER_SELF_VIEW',
     'EMPLOYER_SELF_UPDATE',
+
+    'VISA_VIEW',
 
     'JOB_CREATE',
     'JOB_UPDATE',

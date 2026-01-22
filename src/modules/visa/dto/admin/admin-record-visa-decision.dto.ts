@@ -6,17 +6,17 @@ export class AdminRecordVisaDecisionDto {
   @IsString()
   decision!: 'APPROVED' | 'REJECTED';
 
-  @ApiProperty({ required: false, description: 'Required when REJECTED' })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsString()
   rejectionReason?: string;
 
-  @ApiProperty({ required: false, description: 'Required when APPROVED (ISO date)' })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsISO8601()
   visaIssueDate?: string;
 
-  @ApiProperty({ required: false, description: 'Required when APPROVED (ISO date)' })
+  @ApiProperty({ required: false })
   @IsOptional()
   @IsISO8601()
   visaExpiryDate?: string;

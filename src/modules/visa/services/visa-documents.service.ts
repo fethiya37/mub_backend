@@ -1,56 +1,50 @@
 import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { VisaDocumentRepository } from '../repositories/visa-document.repository';
 import { VisaApplicationRepository } from '../repositories/visa-application.repository';
-import { VisaStatusService } from './visa-status.service';
-import { VisaNotificationsService } from './visa-notifications.service';
 
 @Injectable()
 export class VisaDocumentsService {
   constructor(
     private readonly visas: VisaApplicationRepository,
-    private readonly docs: VisaDocumentRepository,
-    private readonly status: VisaStatusService,
-    private readonly notifications: VisaNotificationsService
+    private readonly docs: VisaDocumentRepository
   ) {}
 
-  async upload(visaId: string, adminId: string, dto: { documentType: string; fileUrl: string; fileHash?: string | null }) {
+  async upload(visaId: string, uploadedByAdminId: string, dto: { documentType: string; fileUrl: string; fileHash?: string }) {
     const visa = await this.visas.findById(visaId);
-    if (!visa) throw new NotFoundException('Visa application not found');
-
-    if (!['DRAFT', 'SUBMITTED', 'UNDER_REVIEW', 'ADDITIONAL_DOCUMENTS_REQUIRED', 'EMBASSY_PROCESSING'].includes(visa.status)) {
-      throw new BadRequestException('Documents cannot be uploaded in this status');
-    }
+    if (!visa) throw new NotFoundException('Visa not found');
+    if (visa.status === 'WITHDRAWN') throw new BadRequestException('Cannot upload document for withdrawn visa');
+    if (visa.status === 'EXPIRED') throw new BadRequestException('Cannot upload document for expired visa');
 
     const doc = await this.docs.uploadNewVersion({
       visaApplicationId: visaId,
       documentType: dto.documentType,
       fileUrl: dto.fileUrl,
       fileHash: dto.fileHash ?? null,
-      uploadedByAdminId: adminId
+      uploadedByAdminId
     });
 
-    if (visa.status === 'ADDITIONAL_DOCUMENTS_REQUIRED') {
-      await this.notifications.statusUpdate(visaId, adminId, `Document uploaded: ${dto.documentType}`);
+    return { ok: true, document: doc };
+  }
+
+  async verify(documentId: string, verifiedByAdminId: string, dto: { verificationStatus: string; reason?: string }) {
+    const doc = await this.docs.findById(documentId);
+    if (!doc) throw new NotFoundException('Document not found');
+
+    if (dto.verificationStatus === 'REJECTED' && (!dto.reason || dto.reason.trim().length < 2)) {
+      throw new BadRequestException('reason is required when rejecting a document');
     }
 
-    return doc;
-  }
-
-  async list(visaId: string) {
-    return this.docs.listByVisa(visaId);
-  }
-
-  async verify(documentId: string, adminId: string, dto: { verificationStatus: string; reason?: string | null }) {
-    const doc = await this.docs.findById(documentId);
-    if (!doc) throw new NotFoundException('Visa document not found');
-
-    const patched = await this.docs.setVerification(documentId, {
+    const updated = await this.docs.setVerification(documentId, {
       verificationStatus: dto.verificationStatus,
       verificationReason: dto.reason ?? null,
-      verifiedByAdminId: adminId,
+      verifiedByAdminId,
       verifiedAt: new Date()
     });
 
-    return patched;
+    return { ok: true, document: updated };
+  }
+
+  list(visaId: string) {
+    return this.docs.listByVisa(visaId);
   }
 }

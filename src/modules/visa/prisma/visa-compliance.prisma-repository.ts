@@ -48,13 +48,11 @@ export class VisaCompliancePrismaRepository extends VisaComplianceRepository {
     const failed = await this.prisma.visaComplianceCheck.count({
       where: { visaApplicationId, requirementStatus: 'FAILED' }
     });
-
     if (failed > 0) return true;
 
     const pending = await this.prisma.visaComplianceCheck.count({
       where: { visaApplicationId, requirementStatus: 'PENDING' }
     });
-
     return pending > 0;
   }
 }
