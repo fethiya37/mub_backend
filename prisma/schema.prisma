@@ -14,6 +14,9 @@ model User {
   isActive          Boolean @default(true)
   applicantVerified Boolean @default(false)
 
+  emailVerified   Boolean   @default(false)
+  emailVerifiedAt DateTime?
+
   failedLoginCount Int       @default(0)
   lockUntil        DateTime?
   tokenVersion     Int       @default(0)
@@ -41,6 +44,7 @@ model User {
   localAgency               LocalAgency?
   localAgencyApprovalLogs   LocalAgencyApprovalLog[] @relation("LocalAgencyActionBy")
 }
+
 
 model Role {
   id          String   @id @default(uuid())

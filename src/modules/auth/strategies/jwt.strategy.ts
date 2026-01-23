@@ -33,6 +33,7 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       phone: user.phone,
       isActive: user.isActive,
       applicantVerified: user.applicantVerified,
+      emailVerified: (user as any).emailVerified ?? false,
       tokenVersion: user.tokenVersion,
       roles,
       permissions

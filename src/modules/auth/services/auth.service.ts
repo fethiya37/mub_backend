@@ -38,7 +38,7 @@ export class AuthService {
     private readonly actionTokens: AccountActionTokensService,
     private readonly audit: AuditService,
     private readonly mail: MailService
-  ) {}
+  ) { }
 
   async login(dto: LoginDto, ctx?: { ip?: string | null; ua?: string | null }) {
     const user = await this.users.findByIdentifier(dto.identifier);
@@ -224,6 +224,8 @@ export class AuthService {
     const user = await this.users.findByIdentifier(dto.email);
     if (!user || !user.email) return { ok: true };
 
+    if ((user as any).emailVerified === true) return { ok: true };
+
     const mins = process.env.EMAIL_VERIFY_EXPIRES_MINUTES ? Number(process.env.EMAIL_VERIFY_EXPIRES_MINUTES) : 1440;
     const expiresAt = new Date(Date.now() + mins * 60 * 1000);
 
@@ -240,15 +242,21 @@ export class AuthService {
     return { ok: true };
   }
 
+
   async verifyEmail(dto: VerifyEmailDto) {
     const row = await this.actionTokens.consume(dto.token, 'EMAIL_VERIFY');
 
     const user = await this.users.findById(row.userId);
     if (!user || !user.email) throw new BadRequestException('Invalid token');
 
+    if ((user as any).emailVerified !== true) {
+      await this.users.update(user.id, { emailVerified: true, emailVerifiedAt: new Date() } as any);
+    }
+
     await this.audit.log({ performedBy: user.id, action: 'EMAIL_VERIFIED' });
     return { ok: true };
   }
+
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
     const user = await this.users.findById(userId);
