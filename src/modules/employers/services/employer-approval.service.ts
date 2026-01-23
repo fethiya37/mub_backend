@@ -28,8 +28,8 @@ export class EmployerApprovalService {
       const existingByEmail = await tx.user.findUnique({ where: { email: employer.contactEmail } });
       if (existingByEmail) throw new BadRequestException('User already exists with this email');
 
-      const role = await tx.role.findUnique({ where: { name: 'EMPLOYER' } });
-      if (!role) throw new BadRequestException('EMPLOYER role missing');
+      const role = await tx.role.findUnique({ where: { name: 'PARTNER_EMPLOYER' } });
+      if (!role) throw new BadRequestException('PARTNER_EMPLOYER role missing');
 
       const unusablePasswordHash = crypto.randomBytes(48).toString('base64url');
 
@@ -74,7 +74,7 @@ export class EmployerApprovalService {
     await this.audit.log({
       performedBy: adminId,
       action: 'EMPLOYER_APPROVED',
-      entityType: 'Employer',
+      entityType: 'PARTNER_EMPLOYER',
       entityId: employerId,
       meta: { reason: reason ?? null, userId: result.userId }
     });
@@ -103,7 +103,7 @@ export class EmployerApprovalService {
     await this.audit.log({
       performedBy: adminId,
       action: 'EMPLOYER_REJECTED',
-      entityType: 'Employer',
+      entityType: 'PARTNER_EMPLOYER',
       entityId: employerId,
       meta: { reason }
     });
