@@ -29,6 +29,18 @@ export class CvAccessService {
     return cv;
   }
 
+  async listApplicantCvs(
+    filters: { applicantId: string; status?: string; jobId?: string },
+    page: number,
+    pageSize: number
+  ) {
+    return this.cvs.listForApplicant(
+      { applicantId: filters.applicantId, status: filters.status, jobId: filters.jobId },
+      page,
+      pageSize
+    );
+  }
+
   async ensureApplicantVerified(applicantId: string) {
     const profile = await this.prisma.applicantProfile.findUnique({ where: { applicantId } });
     if (!profile) throw new NotFoundException('Applicant profile not found');

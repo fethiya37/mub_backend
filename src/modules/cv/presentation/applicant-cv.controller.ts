@@ -1,5 +1,5 @@
-import { Body, Controller, Get, Param, Post, Put } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { CurrentUserDecorator } from '../../../common/decorators/current-user.decorator';
 import type { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -19,6 +19,28 @@ export class ApplicantCvController {
     private readonly drafts: CvDraftService,
     private readonly gen: CvGenerationService
   ) {}
+
+  @RequirePermissions('APPLICANT_SELF_VIEW')
+  @Get()
+  @ApiOperation({ summary: 'List my CVs (paged, optional filters)' })
+  @ApiQuery({ name: 'status', required: false, example: 'draft' })
+  @ApiQuery({ name: 'jobId', required: false, format: 'uuid' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'pageSize', required: false, example: 50 })
+  async list(
+    @CurrentUserDecorator() user: CurrentUser,
+    @Query('status') status?: string,
+    @Query('jobId') jobId?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
+  ) {
+    const applicantId = await this.access.getApplicantIdForUser(user.userId);
+    return this.access.listApplicantCvs(
+      { applicantId, status: status ?? undefined, jobId: jobId ?? undefined },
+      page ? Number(page) : 1,
+      pageSize ? Number(pageSize) : 50
+    );
+  }
 
   @RequirePermissions('APPLICANT_SELF_UPDATE')
   @Post('draft')
@@ -42,13 +64,18 @@ export class ApplicantCvController {
   async updateDraft(@CurrentUserDecorator() user: CurrentUser, @Param('id') id: string, @Body() dto: UpdateCvDraftDto) {
     await this.access.assertCvOwnedByUser(user.userId, id);
     const applicantId = await this.access.getApplicantIdForUser(user.userId);
-    return this.drafts.updateDraft({ applicantId, performedBy: user.userId, cvId: id, summary: dto.summary, sections: dto.sections });
+    return this.drafts.updateDraft({
+      applicantId,
+      performedBy: user.userId,
+      cvId: id,
+      summary: dto.summary,
+      sections: dto.sections
+    });
   }
 
   @RequirePermissions('APPLICANT_SELF_UPDATE')
   @Post('submit/:id')
   @ApiOperation({ summary: 'Submit CV for admin review (draft -> submitted)' })
-  @ApiResponse({ status: 200, schema: { example: { ok: true, cvId: 'cv-uuid-123' } } })
   async submit(@CurrentUserDecorator() user: CurrentUser, @Param('id') id: string) {
     await this.access.assertCvOwnedByUser(user.userId, id);
     const applicantId = await this.access.getApplicantIdForUser(user.userId);

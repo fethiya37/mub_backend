@@ -36,6 +36,27 @@ export class ApplicantCvPrismaRepository extends ApplicantCvRepository {
     });
   }
 
+  async listForApplicant(filters: { applicantId: string; status?: string; jobId?: string }, page: number, pageSize: number) {
+    const skip = (page - 1) * pageSize;
+
+    const where: any = { applicantId: filters.applicantId };
+    if (filters.status) where.status = filters.status;
+    if (filters.jobId) where.jobId = filters.jobId;
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.applicantCv.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: pageSize,
+        include: { template: true }
+      }),
+      this.prisma.applicantCv.count({ where })
+    ]);
+
+    return { items, total };
+  }
+
   async listForAdmin(filters: { status?: string; applicantId?: string; jobId?: string }, page: number, pageSize: number) {
     const skip = (page - 1) * pageSize;
 
