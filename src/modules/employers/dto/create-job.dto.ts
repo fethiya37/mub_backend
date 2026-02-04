@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, IsUrl, Min, MinLength } from 'class-validator';
 import { ContractTypes } from './shared/enums.dto';
 import type { ContractType } from './shared/enums.dto';
 
@@ -28,6 +28,17 @@ export class CreateJobDto {
   @IsOptional()
   @IsString()
   salaryRange?: string;
+
+  @ApiPropertyOptional({ example: 'https://cdn.site.com/job-thumb.png' })
+  @IsOptional()
+  @IsString()
+  @IsUrl()
+  thumbnailUrl?: string;
+
+  @ApiProperty({ example: 2 })
+  @IsInt()
+  @Min(1)
+  vacancies!: number;
 
   @ApiProperty({ enum: ContractTypes, example: 'FULL_TIME' })
   @IsIn(ContractTypes)

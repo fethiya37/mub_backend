@@ -3,7 +3,13 @@ import { ApiProperty } from '@nestjs/swagger';
 export const ApplicantProfileStatuses = ['DRAFT', 'SUBMITTED', 'REJECTED', 'VERIFIED'] as const;
 export type ApplicantProfileStatus = (typeof ApplicantProfileStatuses)[number];
 
-export const ApplicantDocumentTypes = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE', 'LABOR_ID', 'OTHER'] as const;
+export const ApplicantDocumentTypes = [
+  'PASSPORT',
+  'PERSONAL_PHOTO',
+  'COC_CERTIFICATE',
+  'APPLICANT_ID',
+  'OTHER'
+] as const;
 export type ApplicantDocumentType = (typeof ApplicantDocumentTypes)[number];
 
 export const Genders = ['MALE', 'FEMALE'] as const;

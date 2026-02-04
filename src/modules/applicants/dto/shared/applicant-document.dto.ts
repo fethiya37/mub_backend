@@ -12,8 +12,8 @@ export class ApplicantDocumentDto {
   @IsString()
   fileUrl!: string;
 
-  @ApiPropertyOptional({ example: 'PENDING', description: 'Optional verification status managed by admin workflow' })
+  @ApiPropertyOptional({ example: 'PENDING' })
   @IsOptional()
   @IsString()
-  verificationStatus?: string;
+  status?: string;
 }

@@ -14,9 +14,10 @@ import { appGuards } from './app.guards';
 import { ApplicantsModule } from './modules/applicants/applicants.module';
 import { EmployersModule } from './modules/employers/employers.module';
 import { MailModule } from './modules/mail/mail.module';
-import { CvModule } from './modules/cv/cv.module';
-import { VisasModule } from './modules/visa/visa.module';
 import { LocalAgenciesModule } from './modules/local-agencies/local-agencies.module';
+import { VisaModule } from './modules/visa/visa.module';
+import { ExpensesModule } from './modules/expenses/expenses.module';
+import { JobApplicationsModule } from './modules/job-applications/job-applications.module';
 
 @Module({
   imports: [
@@ -37,8 +38,9 @@ import { LocalAgenciesModule } from './modules/local-agencies/local-agencies.mod
     ApplicantsModule,
     EmployersModule,
     MailModule,
-    CvModule,
-    VisasModule,
+    VisaModule,
+    ExpensesModule,
+    JobApplicationsModule,
     LocalAgenciesModule
   ],
   providers: [...appGuards]

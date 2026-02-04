@@ -20,6 +20,8 @@ export class EmployerPrismaRepository extends EmployerRepository {
 
         ownerName: input.ownerName,
         ownerIdNumber: input.ownerIdNumber,
+        ownerIdFileUrl: input.ownerIdFileUrl ?? null,
+
         licenseNumber: input.licenseNumber,
         licenseFileUrl: input.licenseFileUrl,
         licenseExpiry: input.licenseExpiry ?? null,

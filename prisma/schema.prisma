@@ -29,22 +29,13 @@ model User {
   actionTokens  AccountActionToken[]
   auditLogs     AuditLog[]           @relation("AuditPerformedBy")
 
-  applicantProfile     ApplicantProfile?
-  employer             Employer?
-  employerApprovalLogs EmployerApprovalLog[]
-  cvAdminReviews       CvAdminReview[]
-
-  visaAssignedAsCaseOfficer VisaApplication[]        @relation("VisaAssignedCaseOfficer")
-  visaSubmittedByMe         VisaApplication[]        @relation("VisaSubmittedByAdmin")
-  visaStatusHistories       VisaStatusHistory[]
-  visaDocsUploadedByMe      VisaDocument[]           @relation("VisaDocUploadedBy")
-  visaDocsVerifiedByMe      VisaDocument[]           @relation("VisaDocVerifiedBy")
-  visaComplianceChecks      VisaComplianceCheck[]
-  visaNotifications         VisaNotification[]
-  localAgency               LocalAgency?
-  localAgencyApprovalLogs   LocalAgencyApprovalLog[] @relation("LocalAgencyActionBy")
+  applicantProfile        ApplicantProfile?
+  employer                Employer?
+  employerApprovalLogs    EmployerApprovalLog[]
+  localAgency             LocalAgency?
+  localAgencyApprovalLogs LocalAgencyApprovalLog[] @relation("LocalAgencyActionBy")
+  visaCases               VisaCase[]
 }
-
 
 model Role {
   id          String   @id @default(uuid())
@@ -201,100 +192,6 @@ model LocalAgencyApprovalLog {
   @@index([actionDate])
 }
 
-enum ApplicantProfileStatus {
-  DRAFT
-  SUBMITTED
-  VERIFIED
-  REJECTED
-}
-
-enum ApplicantDocumentType {
-  PASSPORT
-  PERSONAL_PHOTO
-  COC_CERTIFICATE
-  LABOR_ID
-  OTHER
-}
-
-enum ApplicantRegistrationSource {
-  SELF
-  AGENCY
-  MUB_STAFF
-}
-
-model ApplicantProfile {
-  applicantId String  @id @default(uuid())
-  userId      String? @unique
-
-  firstName      String?
-  lastName       String?
-  gender         String?
-  dateOfBirth    DateTime?
-  nationality    String?
-  passportNumber String?
-  passportExpiry DateTime?
-  laborId        String?
-  region         String?
-
-  phone         String
-  email         String?
-  address       String?
-  maritalStatus String?
-
-  visaNumber        String?
-  applicationNumber String?
-  barcodeValue      String?
-
-  registrationSource ApplicantRegistrationSource @default(SELF)
-  createdBy          String?
-
-  profileStatus ApplicantProfileStatus @default(DRAFT)
-
-  rejectionReason String?
-  verifiedBy      String?
-  verifiedAt      DateTime?
-  submittedAt     DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
-
-  skills           ApplicantSkill[]
-  qualifications   ApplicantQualification[]
-  workExperiences  ApplicantWorkExperience[]
-  documents        ApplicantDocument[]
-  draftTokens      ApplicantDraftToken[]
-  applicantCvs     ApplicantCv[]
-  visaApplications VisaApplication[]
-
-  @@unique([phone])
-  @@index([email])
-  @@index([passportNumber])
-  @@index([profileStatus])
-  @@index([laborId])
-  @@index([registrationSource])
-  @@index([createdBy])
-}
-
-
-model ApplicantDocument {
-  id                 String                @id @default(uuid())
-  applicantId        String
-  documentType       ApplicantDocumentType
-  fileUrl            String
-  verificationStatus String?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
-
-  @@unique([applicantId, documentType])
-  @@index([applicantId])
-  @@index([documentType])
-}
-
 model ApplicantDraftToken {
   id          String    @id @default(uuid())
   applicantId String
@@ -309,12 +206,125 @@ model ApplicantDraftToken {
   @@index([expiresAt])
 }
 
+enum ApplicantProfileStatus {
+  DRAFT
+  SUBMITTED
+  VERIFIED
+  REJECTED
+}
+
+enum ApplicantDocumentType {
+  PASSPORT
+  PERSONAL_PHOTO
+  COC_CERTIFICATE
+  APPLICANT_ID
+  OTHER
+}
+
+enum ApplicantRegistrationSource {
+  SELF
+  AGENCY
+  MUB_STAFF
+}
+
+model ApplicantProfile {
+  applicantId String  @id @default(uuid())
+  userId      String? @unique
+
+  firstName        String?
+  middleName       String?
+  lastName         String?
+  gender           String?
+  dateOfBirth      DateTime?
+  placeOfBirth     String?
+  nationality      String?
+  religion         String?
+  maritalStatus    String?
+  numberOfChildren Int?
+
+  phone   String  @unique
+  email   String?
+  address String?
+
+  height Float?
+  weight Float?
+
+  laborId String? @unique
+
+  applicationNumber String                 @unique
+  profileStatus     ApplicantProfileStatus @default(DRAFT)
+
+  passportNumber    String?
+  passportPlace     String?
+  passportIssueDate DateTime?
+  passportExpiry    DateTime?
+
+  registrationSource ApplicantRegistrationSource @default(SELF)
+  createdBy          String?
+
+  rejectionReason String?
+  verifiedBy      String?
+  verifiedAt      DateTime?
+  submittedAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  user User? @relation(fields: [userId], references: [id], onDelete: SetNull)
+
+  emergencyContacts    EmergencyContact[]
+  documents            ApplicantDocument[]
+  skills               ApplicantSkill[]
+  qualifications       ApplicantQualification[]
+  workExperiences      ApplicantWorkExperience[]
+  jobApplications      JobApplication[]
+  applicantDraftTokens ApplicantDraftToken[]
+  applicantExpenses    ApplicantExpense[]
+  visaCases            VisaCase[]
+
+  @@index([passportNumber])
+  @@index([laborId])
+  @@index([profileStatus])
+  @@index([registrationSource])
+}
+
+model EmergencyContact {
+  id           String  @id @default(uuid())
+  applicantId  String
+  fullName     String
+  phone        String
+  relationship String
+  address      String?
+  idFileUrl    String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+
+  @@index([applicantId])
+}
+
+model ApplicantDocument {
+  id           String                @id @default(uuid())
+  applicantId  String
+  documentType ApplicantDocumentType
+  fileUrl      String
+  status       String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+
+  @@unique([applicantId, documentType])
+  @@index([documentType])
+}
+
 model ApplicantSkill {
-  id                String  @id @default(uuid())
-  applicantId       String
-  skillName         String
-  proficiencyLevel  String?
-  yearsOfExperience Int?
+  id          String @id @default(uuid())
+  applicantId String
+  skillName   String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -322,16 +332,12 @@ model ApplicantSkill {
   applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
 
   @@unique([applicantId, skillName])
-  @@index([applicantId])
 }
 
 model ApplicantQualification {
-  id                String  @id @default(uuid())
-  applicantId       String
-  qualificationType String
-  institution       String?
-  country           String?
-  yearCompleted     Int?
+  id            String @id @default(uuid())
+  applicantId   String
+  qualification String
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -342,14 +348,11 @@ model ApplicantQualification {
 }
 
 model ApplicantWorkExperience {
-  id               String    @id @default(uuid())
-  applicantId      String
-  jobTitle         String
-  employerName     String?
-  country          String?
-  startDate        DateTime?
-  endDate          DateTime?
-  responsibilities String?
+  id          String  @id @default(uuid())
+  applicantId String
+  jobTitle    String
+  country     String?
+  yearsWorked Int?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -401,6 +404,7 @@ model Employer {
 
   ownerName      String
   ownerIdNumber  String
+  ownerIdFileUrl String?
   licenseNumber  String    @unique
   licenseFileUrl String
   licenseExpiry  DateTime?
@@ -413,9 +417,9 @@ model Employer {
   userId String? @unique
   user   User?   @relation(fields: [userId], references: [id], onDelete: SetNull)
 
-  approvalLogs     EmployerApprovalLog[]
-  jobs             JobPosting[]
-  visaApplications VisaApplication[]
+  approvalLogs EmployerApprovalLog[]
+  jobs         JobPosting[]
+  visaCases    VisaCase[]
 
   @@unique([contactEmail])
   @@unique([contactPhone])
@@ -448,299 +452,331 @@ model JobPosting {
   country        String
   city           String?
   salaryRange    String?
+  thumbnailUrl   String?
   contractType   ContractType
+  vacancies      Int
   status         JobStatus    @default(DRAFT)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  employer         Employer          @relation(fields: [employerId], references: [id], onDelete: Cascade)
-  applicantCvs     ApplicantCv[]
-  visaApplications VisaApplication[]
+  employer        Employer         @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  jobApplications JobApplication[]
+  visaCases       VisaCase[]
 
   @@index([employerId])
   @@index([status])
   @@index([country])
 }
 
-enum ApplicantCvStatus {
-  draft
-  submitted
-  approved
-  rejected
-}
-
-enum CvAdminReviewStatus {
-  approved
-  rejected
-}
-
-model CvTemplate {
-  id           String   @id @default(uuid())
-  name         String
-  description  String?
-  htmlTemplate String
-  cssStyle     String?
-  isActive     Boolean  @default(true)
-  createdBy    String?
-  createdAt    DateTime @default(now())
-  updatedAt    DateTime @updatedAt
-
-  cvs ApplicantCv[]
-
-  @@index([isActive])
-  @@index([createdAt])
-}
-
-model ApplicantCv {
-  id             String            @id @default(uuid())
-  applicantId    String
-  jobId          String?
-  cvTemplateId   String
-  status         ApplicantCvStatus @default(draft)
-  currentVersion Int               @default(0)
-  submittedAt    DateTime?
-  createdAt      DateTime          @default(now())
-  updatedAt      DateTime          @updatedAt
-
-  template  CvTemplate       @relation(fields: [cvTemplateId], references: [id], onDelete: Restrict)
-  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
-  job       JobPosting?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
-
-  versions ApplicantCvVersion[]
-  sections ApplicantCvSection[]
-  reviews  CvAdminReview[]
-  audits   CvAuditLog[]
-
-  @@index([applicantId])
-  @@index([jobId])
-  @@index([status])
-  @@index([createdAt])
-}
-
-model ApplicantCvVersion {
-  id            String   @id @default(uuid())
-  cvId          String
-  versionNumber Int
-  pdfUrl        String
-  htmlSnapshot  String
-  isFinal       Boolean  @default(false)
-  createdAt     DateTime @default(now())
-
-  cv ApplicantCv @relation(fields: [cvId], references: [id], onDelete: Cascade)
-
-  @@unique([cvId, versionNumber])
-  @@index([cvId])
-  @@index([createdAt])
-}
-
-model ApplicantCvSection {
-  id            String  @id @default(uuid())
-  cvId          String
-  sectionName   String
-  isEnabled     Boolean @default(true)
-  displayOrder  Int
-  customContent Json?
-
-  cv ApplicantCv @relation(fields: [cvId], references: [id], onDelete: Cascade)
-
-  @@unique([cvId, sectionName])
-  @@index([cvId])
-  @@index([displayOrder])
-}
-
-model CvAdminReview {
-  id         String              @id @default(uuid())
-  cvId       String
-  adminId    String
-  status     CvAdminReviewStatus
-  comments   String?
-  reviewedAt DateTime            @default(now())
-
-  cv    ApplicantCv @relation(fields: [cvId], references: [id], onDelete: Cascade)
-  admin User        @relation(fields: [adminId], references: [id], onDelete: Restrict)
-
-  @@index([cvId])
-  @@index([reviewedAt])
-}
-
-model CvAuditLog {
-  id          String   @id @default(uuid())
-  cvId        String
-  action      String
-  performedBy String?
-  meta        Json?
-  performedAt DateTime @default(now())
-
-  cv ApplicantCv @relation(fields: [cvId], references: [id], onDelete: Cascade)
-
-  @@index([cvId])
-  @@index([performedAt])
-}
-
-enum VisaApplicationStatus {
-  DRAFT
-  SUBMITTED
-  UNDER_REVIEW
-  ADDITIONAL_DOCUMENTS_REQUIRED
-  EMBASSY_PROCESSING
+enum ApplicationStatus {
+  PENDING
   APPROVED
   REJECTED
-  EXPIRED
+  SELECTED
   WITHDRAWN
 }
 
-enum VisaDocumentType {
-  PASSPORT
-  MEDICAL_CLEARANCE
-  POLICE_CLEARANCE
-  EMPLOYMENT_CONTRACT
-  INVITATION_LETTER
-  EMBASSY_FORMS
-  OTHER
+model JobApplication {
+  id           String            @id @default(uuid())
+  jobPostingId String
+  applicantId  String
+  cvFileUrl    String
+  status       ApplicationStatus @default(PENDING)
+
+  jobPosting JobPosting       @relation(fields: [jobPostingId], references: [id], onDelete: Cascade)
+  applicant  ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+
+  @@unique([jobPostingId, applicantId])
+  @@index([applicantId])
+  @@index([status])
+  @@index([jobPostingId])
 }
 
-enum VisaDocumentVerificationStatus {
+enum VisaCaseStatus {
+  INITIATED
+  MEDICAL
+  INSURANCE
+  FINGERPRINT
+  EMBASSY
+  LMIS
+  VISA
+  FLIGHT_BOOKED
+  RETURNED
+  DEPLOYED
+  CLOSED
+}
+
+enum MedicalFitnessResult {
+  FIT
+  UNFIT
+}
+
+enum EmbassyProcessStatus {
   PENDING
-  VERIFIED
+  COMPLETED
+}
+
+enum LMISStatus {
+  PENDING
+  ISSUED
   REJECTED
 }
 
-enum VisaComplianceRequirementStatus {
-  PENDING
-  COMPLETED
-  FAILED
+enum VisaAttemptStatus {
+  ISSUED
+  REJECTED
 }
 
-enum VisaNotificationType {
-  EXPIRY_ALERT
-  STATUS_UPDATE
-  DOCUMENT_REQUEST
-  DECISION_RECORDED
-}
-
-model VisaApplication {
-  id                   String                @id @default(uuid())
-  applicantId          String
-  employerId           String?
-  jobId                String?
-  visaType             String
-  destinationCountry   String
-  applicationReference String?
-  status               VisaApplicationStatus @default(DRAFT)
-
-  assignedCaseOfficerId String?
-  submittedByAdminId    String?
-  submissionDate        DateTime?
-  decisionDate          DateTime?
-  visaIssueDate         DateTime?
-  visaExpiryDate        DateTime?
-
-  remarks String?
+model Sponsor {
+  id               String  @id @default(uuid())
+  fullName         String
+  sponsorIdFileUrl String?
+  phone            String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
-  employer  Employer?        @relation(fields: [employerId], references: [id], onDelete: SetNull)
-  job       JobPosting?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  visaCases VisaCase[]
+}
 
-  assignedCaseOfficer User? @relation("VisaAssignedCaseOfficer", fields: [assignedCaseOfficerId], references: [id], onDelete: SetNull)
-  submittedByAdmin    User? @relation("VisaSubmittedByAdmin", fields: [submittedByAdminId], references: [id], onDelete: SetNull)
+model VisaCase {
+  id                 String         @id @default(uuid())
+  applicantId        String
+  partnerId          String?
+  jobId              String?
+  destinationCountry String
+  status             VisaCaseStatus @default(INITIATED)
+  isActive           Boolean        @default(true)
+  caseManagerUserId  String
+  sponsorId          String?
 
-  documents     VisaDocument[]
-  compliance    VisaComplianceCheck[]
-  statusHistory VisaStatusHistory[]
-  notifications VisaNotification[]
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicant   ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+  partner     Employer?        @relation(fields: [partnerId], references: [id], onDelete: SetNull)
+  job         JobPosting?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
+  caseManager User             @relation(fields: [caseManagerUserId], references: [id], onDelete: Restrict)
+  sponsor     Sponsor?         @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
+
+  medical        VisaMedical?
+  insurance      VisaInsurance?
+  fingerprint    VisaFingerprint?
+  embassyProcess EmbassyProcess?
+  lmisProcess    LMISProcess?
+
+  visaAttempts   VisaAttempt[]
+  flightBookings FlightBooking[]
+  returns        VisaReturn[]
+
+  @@unique([applicantId, jobId, isActive])
+  @@unique([applicantId, partnerId, isActive])
+  @@index([applicantId])
+  @@index([partnerId])
+  @@index([jobId])
+  @@index([destinationCountry])
+  @@index([status])
+  @@index([caseManagerUserId])
+  @@index([sponsorId])
+  @@index([isActive])
+}
+
+model VisaMedical {
+  id            String               @id @default(uuid())
+  visaCaseId    String               @unique
+  reportFileUrl String
+  result        MedicalFitnessResult
+  expiresAt     DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visaCase VisaCase @relation(fields: [visaCaseId], references: [id], onDelete: Cascade)
+
+  @@index([result])
+  @@index([expiresAt])
+}
+
+model VisaInsurance {
+  id         String @id @default(uuid())
+  visaCaseId String @unique
+
+  providerName  String?
+  policyNumber  String?
+  policyFileUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visaCase VisaCase @relation(fields: [visaCaseId], references: [id], onDelete: Cascade)
+
+  @@index([policyNumber])
+}
+
+model VisaFingerprint {
+  id         String @id @default(uuid())
+  visaCaseId String @unique
+
+  isDone Boolean @default(false)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visaCase VisaCase @relation(fields: [visaCaseId], references: [id], onDelete: Cascade)
+
+  @@index([isDone])
+}
+
+model EmbassyProcess {
+  id         String @id @default(uuid())
+  visaCaseId String @unique
+
+  status EmbassyProcessStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visaCase VisaCase @relation(fields: [visaCaseId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model LMISProcess {
+  id         String @id @default(uuid())
+  visaCaseId String @unique
+
+  status LMISStatus @default(PENDING)
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visaCase VisaCase @relation(fields: [visaCaseId], references: [id], onDelete: Cascade)
+
+  @@index([status])
+}
+
+model VisaAttempt {
+  id            String            @id @default(uuid())
+  visaCaseId    String
+  attemptNumber Int
+  status        VisaAttemptStatus
+
+  applicationNumber String?
+  visaNumber        String?
+  issuedAt          DateTime?
+  expiresAt         DateTime?
+  rejectionReason   String?
+
+  barcodeValue    String?
+  barcodeImageUrl String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visaCase VisaCase @relation(fields: [visaCaseId], references: [id], onDelete: Cascade)
+
+  @@unique([visaCaseId, attemptNumber])
+  @@index([visaCaseId])
+  @@index([status])
+}
+
+model FlightBooking {
+  id         String @id @default(uuid())
+  visaCaseId String
+
+  pnr         String
+  airline     String?
+  departureAt DateTime?
+  arrivalAt   DateTime?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visaCase VisaCase @relation(fields: [visaCaseId], references: [id], onDelete: Cascade)
+
+  @@index([visaCaseId])
+  @@index([pnr])
+}
+
+model VisaReturn {
+  id         String @id @default(uuid())
+  visaCaseId String
+
+  reason     String
+  returnedAt DateTime @default(now())
+
+  createdAt DateTime @default(now())
+
+  visaCase VisaCase @relation(fields: [visaCaseId], references: [id], onDelete: Cascade)
+
+  @@index([visaCaseId])
+  @@index([returnedAt])
+}
+
+model CompanyExpenseType {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expenses CompanyExpense[]
+
+  @@index([name])
+}
+
+model CompanyExpense {
+  id            String  @id @default(uuid())
+  typeId        String?
+  typeNameOther String?
+  amount        Decimal @db.Decimal(18, 2)
+
+  expenseDate DateTime
+  referenceNo String?
+  description String?
+  createdBy   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  type CompanyExpenseType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
+
+  @@index([typeId])
+  @@index([expenseDate])
+  @@index([createdBy])
+}
+
+model ApplicantExpenseType {
+  id        String   @id @default(uuid())
+  name      String   @unique
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  expenses ApplicantExpense[]
+
+  @@index([name])
+}
+
+model ApplicantExpense {
+  id            String  @id @default(uuid())
+  applicantId   String
+  typeId        String?
+  typeNameOther String?
+  amount        Decimal @db.Decimal(18, 2)
+
+  expenseDate DateTime
+  referenceNo String?
+  description String?
+  createdBy   String?
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicant ApplicantProfile      @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+  type      ApplicantExpenseType? @relation(fields: [typeId], references: [id], onDelete: SetNull)
 
   @@index([applicantId])
-  @@index([employerId])
-  @@index([jobId])
-  @@index([status])
-  @@index([destinationCountry])
-  @@index([assignedCaseOfficerId])
-}
-
-model VisaStatusHistory {
-  id                String                 @id @default(uuid())
-  visaApplicationId String
-  previousStatus    VisaApplicationStatus?
-  newStatus         VisaApplicationStatus
-  changedByAdminId  String?
-  changeReason      String?
-  changedAt         DateTime               @default(now())
-
-  visa  VisaApplication @relation(fields: [visaApplicationId], references: [id], onDelete: Cascade)
-  admin User?           @relation(fields: [changedByAdminId], references: [id], onDelete: SetNull)
-
-  @@index([visaApplicationId])
-  @@index([changedAt])
-  @@index([newStatus])
-}
-
-model VisaDocument {
-  id                 String                         @id @default(uuid())
-  visaApplicationId  String
-  documentType       VisaDocumentType
-  fileUrl            String
-  fileHash           String?
-  versionNumber      Int                            @default(1)
-  isActive           Boolean                        @default(true)
-  verificationStatus VisaDocumentVerificationStatus @default(PENDING)
-  verificationReason String?
-  verifiedByAdminId  String?
-  verifiedAt         DateTime?
-
-  uploadedByAdminId String?
-  uploadedAt        DateTime @default(now())
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  visa       VisaApplication @relation(fields: [visaApplicationId], references: [id], onDelete: Cascade)
-  verifiedBy User?           @relation("VisaDocVerifiedBy", fields: [verifiedByAdminId], references: [id], onDelete: SetNull)
-  uploadedBy User?           @relation("VisaDocUploadedBy", fields: [uploadedByAdminId], references: [id], onDelete: SetNull)
-
-  @@index([visaApplicationId])
-  @@index([documentType])
-  @@index([isActive])
-  @@index([verificationStatus])
-}
-
-model VisaComplianceCheck {
-  id                String                          @id @default(uuid())
-  visaApplicationId String
-  requirementType   String
-  requirementStatus VisaComplianceRequirementStatus @default(PENDING)
-  remarks           String?
-  checkedByAdminId  String?
-  checkedAt         DateTime?
-
-  createdAt DateTime @default(now())
-  updatedAt DateTime @updatedAt
-
-  visa  VisaApplication @relation(fields: [visaApplicationId], references: [id], onDelete: Cascade)
-  admin User?           @relation(fields: [checkedByAdminId], references: [id], onDelete: SetNull)
-
-  @@index([visaApplicationId])
-  @@index([requirementStatus])
-  @@index([checkedAt])
-}
-
-model VisaNotification {
-  id                String               @id @default(uuid())
-  visaApplicationId String
-  adminUserId       String?
-  notificationType  VisaNotificationType
-  message           String
-  isRead            Boolean              @default(false)
-  createdAt         DateTime             @default(now())
-
-  visa  VisaApplication @relation(fields: [visaApplicationId], references: [id], onDelete: Cascade)
-  admin User?           @relation(fields: [adminUserId], references: [id], onDelete: SetNull)
-
-  @@index([visaApplicationId])
-  @@index([adminUserId])
-  @@index([notificationType])
-  @@index([createdAt])
+  @@index([typeId])
+  @@index([expenseDate])
+  @@index([createdBy])
 }

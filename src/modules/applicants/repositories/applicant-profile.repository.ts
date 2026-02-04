@@ -1,32 +1,53 @@
 export type ApplicantProfileUpsertInput = {
   phone: string;
-  email?: string | null;
+  applicationNumber?: string;
+
+  email?: string | undefined;
 
   firstName?: string | null;
+  middleName?: string | null;
   lastName?: string | null;
   gender?: string | null;
-  dateOfBirth?: Date | null;
-  nationality?: string | null;
-  region?: string | null;
 
-  passportNumber?: string | null;
-  passportExpiry?: Date | null;
+  dateOfBirth?: Date | null;
+  placeOfBirth?: string | null;
+  nationality?: string | null;
+  religion?: string | null;
+  maritalStatus?: string | null;
+  numberOfChildren?: number | null;
+
+  height?: number | null;
+  weight?: number | null;
+
   laborId?: string | null;
 
-  address?: string | null;
-  maritalStatus?: string | null;
+  passportNumber?: string | null;
+  passportPlace?: string | null;
+  passportIssueDate?: Date | null;
+  passportExpiry?: Date | null;
 
-  visaNumber?: string | null;
-  applicationNumber?: string | null;
-  barcodeValue?: string | null;
+  address?: string | null;
 
   registrationSource?: 'SELF' | 'AGENCY' | 'MUB_STAFF' | null;
   createdBy?: string | null;
 
-  skills?: { skillName: string; proficiencyLevel?: string | null; yearsOfExperience?: number | null }[] | undefined;
-  qualifications?: { qualificationType: string; institution?: string | null; country?: string | null; yearCompleted?: number | null }[] | undefined;
-  workExperiences?: { jobTitle: string; employerName?: string | null; country?: string | null; startDate?: Date | null; endDate?: Date | null; responsibilities?: string | null }[] | undefined;
-  documents?: { documentType: any; fileUrl: string; verificationStatus?: string | null }[] | undefined;
+  emergencyContacts?:
+  | {
+    fullName: string;
+    phone: string;
+    relationship: string;
+    address?: string | null;
+    idFileUrl?: string | null;
+  }[]
+  | undefined;
+
+  skills?: { skillName: string }[] | undefined;
+
+  qualifications?: { qualification: string; qualificationType: string }[] | undefined;
+
+  workExperiences?: { jobTitle: string; country?: string | null; yearsWorked?: number | null }[] | undefined;
+
+  documents?: { documentType: any; fileUrl: string; status?: string | null }[] | undefined;
 };
 
 export abstract class ApplicantProfileRepository {

@@ -1,342 +1,296 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { VisaApplicationRepository } from '../repositories/visa-application.repository';
-import { VisaStatusHistoryRepository } from '../repositories/visa-status-history.repository';
-import { VisaComplianceRepository } from '../repositories/visa-compliance.repository';
-import { VisaDocumentRepository } from '../repositories/visa-document.repository';
-import { VisaStatusService } from './visa-status.service';
-import { VisaNotificationsService } from './visa-notifications.service';
+
+import { VisaCaseRepository } from '../repositories/visa-case.repository';
+import { VisaAttemptRepository } from '../repositories/visa-attempt.repository';
+import { VisaMedicalRepository } from '../repositories/visa-medical.repository';
+import { VisaInsuranceRepository } from '../repositories/visa-insurance.repository';
+import { VisaFingerprintRepository } from '../repositories/visa-fingerprint.repository';
+import { EmbassyProcessRepository } from '../repositories/embassy-process.repository';
+import { LMISProcessRepository } from '../repositories/lmis-process.repository';
+import { FlightBookingRepository } from '../repositories/flight-booking.repository';
+import { VisaReturnRepository } from '../repositories/visa-return.repository';
+
 import { VisaAccessService } from './visa-access.service';
+import { VisaStatusService } from './visa-status.service';
+import { VisaAttemptNumberService } from './visa-attempt-number.service';
+
+import type { AdminCreateVisaCaseDto } from '../dto/admin/admin-create-visa-case.dto';
+import type { AdminAssignCaseManagerDto } from '../dto/admin/admin-assign-case-manager.dto';
+import type { AdminListVisaCasesQueryDto } from '../dto/admin/admin-list-visa-cases.query.dto';
+import type { AdminUpsertMedicalDto } from '../dto/admin/admin-upsert-medical.dto';
+import type { AdminUpsertInsuranceDto } from '../dto/admin/admin-upsert-insurance.dto';
+import type { AdminSetFingerprintDto } from '../dto/admin/admin-set-fingerprint.dto';
+import type { AdminUpsertEmbassyProcessDto } from '../dto/admin/admin-upsert-embassy-process.dto';
+import type { AdminUpsertLmisProcessDto } from '../dto/admin/admin-upsert-lmis-process.dto';
+import type { AdminCreateVisaAttemptDto } from '../dto/admin/admin-create-visa-attempt.dto';
+import type { AdminCreateFlightBookingDto } from '../dto/admin/admin-create-flight-booking.dto';
+import type { AdminCreateVisaReturnDto } from '../dto/admin/admin-create-visa-return.dto';
+import type { AdminCloseVisaCaseDto } from '../dto/admin/admin-close-visa-case.dto';
+import type { ApplicantListVisaCasesQueryDto } from '../dto/applicant/applicant-list-visa-cases.query.dto';
+import type { EmployerListVisaCasesQueryDto } from '../dto/employer/employer-list-visa-cases.query.dto';
 
 @Injectable()
 export class VisasService {
-  private readonly requiredDocs: readonly string[] = [
-    'PASSPORT',
-    'MEDICAL_CLEARANCE',
-    'POLICE_CLEARANCE',
-    'EMPLOYMENT_CONTRACT',
-    'INVITATION_LETTER',
-    'EMBASSY_FORMS'
-  ];
-
   constructor(
     private readonly prisma: PrismaService,
-    private readonly repo: VisaApplicationRepository,
-    private readonly history: VisaStatusHistoryRepository,
-    private readonly compliance: VisaComplianceRepository,
-    private readonly docs: VisaDocumentRepository,
+    private readonly cases: VisaCaseRepository,
+    private readonly attempts: VisaAttemptRepository,
+    private readonly medical: VisaMedicalRepository,
+    private readonly insurance: VisaInsuranceRepository,
+    private readonly fingerprint: VisaFingerprintRepository,
+    private readonly embassy: EmbassyProcessRepository,
+    private readonly lmis: LMISProcessRepository,
+    private readonly flights: FlightBookingRepository,
+    private readonly returns: VisaReturnRepository,
+    private readonly access: VisaAccessService,
     private readonly status: VisaStatusService,
-    private readonly notifications: VisaNotificationsService,
-    private readonly access: VisaAccessService
+    private readonly attemptNumbers: VisaAttemptNumberService
   ) {}
 
-  async createDraft(adminUserId: string, dto: any) {
-    const applicant = await this.prisma.applicantProfile.findUnique({
-      where: { applicantId: dto.applicantId },
-      select: { applicantId: true, profileStatus: true }
-    });
-    if (!applicant) throw new NotFoundException('Applicant not found');
-    if (applicant.profileStatus !== 'VERIFIED') throw new BadRequestException('Applicant must be VERIFIED');
+  private page(v?: number) {
+    return v && v > 0 ? v : 1;
+  }
 
-    const dup = await this.repo.findActiveDuplicate({
-      applicantId: dto.applicantId,
-      destinationCountry: dto.destinationCountry,
-      visaType: dto.visaType
-    });
-    if (dup) throw new BadRequestException('Duplicate active visa application exists for this applicant, country and visa type');
+  private pageSize(v?: number, def = 50) {
+    const n = v && v > 0 ? v : def;
+    return n > 200 ? 200 : n;
+  }
 
-    const created = await this.repo.createDraft({
+  async adminCreateCase(adminUserId: string, dto: AdminCreateVisaCaseDto) {
+    await this.ensureApplicantExists(dto.applicantId);
+
+    if (dto.partnerId) await this.ensureEmployerExists(dto.partnerId);
+    if (dto.jobId) await this.ensureJobExists(dto.jobId);
+    if (dto.sponsorId) await this.ensureSponsorExists(dto.sponsorId);
+
+    const input = {
       applicantId: dto.applicantId,
-      employerId: dto.employerId ?? null,
+      partnerId: dto.partnerId ?? null,
       jobId: dto.jobId ?? null,
-      visaType: dto.visaType,
       destinationCountry: dto.destinationCountry,
-      applicationReference: dto.applicationReference ?? null,
-      assignedCaseOfficerId: dto.assignedCaseOfficerId ?? null,
-      remarks: dto.remarks ?? null
+      caseManagerUserId: adminUserId,
+      sponsorId: dto.sponsorId ?? null
+    };
+
+    return this.cases.create(input);
+  }
+
+  adminListCases(q: AdminListVisaCasesQueryDto) {
+    return this.cases.listAdmin(
+      {
+        applicantId: q.applicantId,
+        partnerId: q.partnerId,
+        jobId: q.jobId,
+        status: q.status,
+        isActive: q.isActive
+      },
+      this.page(q.page),
+      this.pageSize(q.pageSize, 50)
+    );
+  }
+
+  async adminAssignCaseManager(adminUserId: string, visaCaseId: string, dto: AdminAssignCaseManagerDto) {
+    const c = await this.getCaseOrThrow(visaCaseId);
+    this.status.ensureCaseActive(c.isActive);
+
+    await this.ensureUserExists(dto.caseManagerUserId);
+
+    return this.cases.update(visaCaseId, {
+      caseManagerUserId: dto.caseManagerUserId
+    });
+  }
+
+  async adminUpsertMedical(adminUserId: string, dto: AdminUpsertMedicalDto) {
+    const c = await this.getCaseOrThrow(dto.visaCaseId);
+    this.status.ensureCaseActive(c.isActive);
+
+    const medical = await this.medical.upsert({
+      visaCaseId: dto.visaCaseId,
+      reportFileUrl: dto.reportFileUrl,
+      result: dto.result,
+      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null
     });
 
-    await this.history.add({
-      visaApplicationId: created.id,
-      previousStatus: null,
-      newStatus: 'DRAFT',
-      changedByAdminId: adminUserId,
-      changeReason: null
+    await this.cases.update(dto.visaCaseId, { status: this.status.statusForMedical() });
+
+    return medical;
+  }
+
+  async adminUpsertInsurance(adminUserId: string, dto: AdminUpsertInsuranceDto) {
+    const c = await this.getCaseOrThrow(dto.visaCaseId);
+    this.status.ensureCaseActive(c.isActive);
+
+    const insurance = await this.insurance.upsert({
+      visaCaseId: dto.visaCaseId,
+      providerName: dto.providerName ?? null,
+      policyNumber: dto.policyNumber ?? null,
+      policyFileUrl: dto.policyFileUrl ?? null
     });
 
-    await this.notifications.statusUpdate(created.id, adminUserId, 'Visa application created as DRAFT');
+    await this.cases.update(dto.visaCaseId, { status: this.status.statusForInsurance() });
+
+    return insurance;
+  }
+
+  async adminSetFingerprint(adminUserId: string, visaCaseId: string, dto: AdminSetFingerprintDto) {
+    const c = await this.getCaseOrThrow(visaCaseId);
+    this.status.ensureCaseActive(c.isActive);
+
+    const fp = await this.fingerprint.upsert({ visaCaseId, isDone: dto.isDone });
+
+    await this.cases.update(visaCaseId, { status: this.status.statusForFingerprint() });
+
+    return fp;
+  }
+
+  async adminUpsertEmbassy(adminUserId: string, dto: AdminUpsertEmbassyProcessDto) {
+    const c = await this.getCaseOrThrow(dto.visaCaseId);
+    this.status.ensureCaseActive(c.isActive);
+
+    const ep = await this.embassy.upsert({ visaCaseId: dto.visaCaseId, status: dto.status });
+
+    await this.cases.update(dto.visaCaseId, { status: this.status.statusForEmbassy() });
+
+    return ep;
+  }
+
+  async adminUpsertLMIS(adminUserId: string, dto: AdminUpsertLmisProcessDto) {
+    const c = await this.getCaseOrThrow(dto.visaCaseId);
+    this.status.ensureCaseActive(c.isActive);
+
+    const lp = await this.lmis.upsert({ visaCaseId: dto.visaCaseId, status: dto.status });
+
+    await this.cases.update(dto.visaCaseId, { status: this.status.statusForLMIS() });
+
+    return lp;
+  }
+
+  async adminCreateAttempt(adminUserId: string, dto: AdminCreateVisaAttemptDto) {
+    const c = await this.getCaseOrThrow(dto.visaCaseId);
+    this.status.ensureCaseActive(c.isActive);
+
+    return this.prisma.$transaction(async (tx) => {
+      const max = await tx.visaAttempt.aggregate({
+        where: { visaCaseId: dto.visaCaseId },
+        _max: { attemptNumber: true }
+      });
+
+      const attemptNumber = (max._max.attemptNumber ?? 0) + 1;
+
+      const created = await tx.visaAttempt.create({
+        data: {
+          visaCaseId: dto.visaCaseId,
+          attemptNumber,
+          status: dto.status,
+          applicationNumber: dto.applicationNumber ?? null,
+          visaNumber: dto.visaNumber ?? null,
+          issuedAt: dto.issuedAt ? new Date(dto.issuedAt) : null,
+          expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
+          rejectionReason: dto.rejectionReason ?? null,
+          barcodeValue: dto.barcodeValue ?? null,
+          barcodeImageUrl: dto.barcodeImageUrl ?? null
+        }
+      });
+
+      await tx.visaCase.update({
+        where: { id: dto.visaCaseId },
+        data: { status: this.status.statusForVisaAttempt() }
+      });
+
+      return created;
+    });
+  }
+
+  async adminCreateFlight(adminUserId: string, dto: AdminCreateFlightBookingDto) {
+    const c = await this.getCaseOrThrow(dto.visaCaseId);
+    this.status.ensureCaseActive(c.isActive);
+
+    const created = await this.flights.create({
+      visaCaseId: dto.visaCaseId,
+      pnr: dto.pnr,
+      airline: dto.airline ?? null,
+      departureAt: dto.departureAt ? new Date(dto.departureAt) : null,
+      arrivalAt: dto.arrivalAt ? new Date(dto.arrivalAt) : null
+    });
+
+    await this.cases.update(dto.visaCaseId, { status: this.status.statusForFlightBooking() });
 
     return created;
   }
 
-  async updateDraft(visaId: string, adminUserId: string, dto: any) {
-    const visa = await this.repo.findById(visaId);
-    if (!visa) throw new NotFoundException('Visa not found');
+  async adminCreateReturn(adminUserId: string, dto: AdminCreateVisaReturnDto) {
+    const c = await this.getCaseOrThrow(dto.visaCaseId);
+    this.status.ensureCaseActive(c.isActive);
 
-    this.status.ensureDraftEditable(visa.status);
-
-    const patch: any = {
-      employerId: dto.employerId ?? undefined,
-      jobId: dto.jobId ?? undefined,
-      visaType: dto.visaType ?? undefined,
-      destinationCountry: dto.destinationCountry ?? undefined,
-      applicationReference: dto.applicationReference ?? undefined,
-      assignedCaseOfficerId: dto.assignedCaseOfficerId ?? undefined,
-      remarks: dto.remarks ?? undefined
-    };
-
-    const updated = await this.repo.updateDraft(visaId, patch);
-
-    await this.notifications.statusUpdate(visaId, adminUserId, 'Visa application updated');
-
-    return updated;
-  }
-
-  async submit(visaId: string, adminUserId: string, dto: any) {
-    const visa = await this.repo.findById(visaId);
-    if (!visa) throw new NotFoundException('Visa not found');
-
-    this.status.ensureCanSubmit(visa.status);
-
-    const documents = await this.docs.listByVisa(visaId);
-    const activeByType = new Map<string, any>();
-    for (const d of documents) {
-      if (!d.isActive) continue;
-      if (!activeByType.has(d.documentType)) activeByType.set(d.documentType, d);
-    }
-
-    const missing = this.requiredDocs.filter((t) => !activeByType.has(t));
-    if (missing.length) throw new BadRequestException(`Missing required documents: ${missing.join(', ')}`);
-
-    const complianceBlocked = await this.compliance.hasBlockingFailures(visaId);
-    if (complianceBlocked) throw new BadRequestException('Compliance checks are pending or failed');
-
-    const next = 'SUBMITTED';
-    this.status.ensureTransition(visa.status, next);
-
-    await this.repo.setStatus(visaId, next, {
-      submittedByAdminId: adminUserId,
-      submissionDate: new Date(),
-      remarks: dto?.remarks ?? visa.remarks ?? null
+    const created = await this.returns.create({
+      visaCaseId: dto.visaCaseId,
+      reason: dto.reason
     });
 
-    await this.history.add({
-      visaApplicationId: visaId,
-      previousStatus: visa.status,
-      newStatus: next,
-      changedByAdminId: adminUserId,
-      changeReason: null
+    await this.cases.update(dto.visaCaseId, { status: this.status.statusForReturn() });
+
+    return created;
+  }
+
+  async adminCloseCase(adminUserId: string, visaCaseId: string, dto: AdminCloseVisaCaseDto) {
+    const c = await this.getCaseOrThrow(visaCaseId);
+    this.status.ensureCanClose(c.status);
+
+    if (dto.isActive !== false) throw new BadRequestException('Closing requires isActive=false');
+
+    return this.cases.update(visaCaseId, {
+      isActive: false,
+      status: this.status.statusForClosed()
     });
-
-    await this.notifications.statusUpdate(visaId, adminUserId, 'Visa application submitted');
-
-    return { ok: true, visaId };
   }
 
-  async updateStatus(visaId: string, adminUserId: string, dto: { status: string; reason?: string }) {
-    const visa = await this.repo.findById(visaId);
-    if (!visa) throw new NotFoundException('Visa not found');
-
-    const next = dto.status;
-    this.status.ensureTransition(visa.status, next);
-
-    await this.repo.setStatus(visaId, next, {
-      remarks: visa.remarks ?? null
-    });
-
-    await this.history.add({
-      visaApplicationId: visaId,
-      previousStatus: visa.status,
-      newStatus: next,
-      changedByAdminId: adminUserId,
-      changeReason: dto.reason ?? null
-    });
-
-    await this.notifications.statusUpdate(visaId, adminUserId, `Visa status updated to ${next}`);
-
-    if (next === 'ADDITIONAL_DOCUMENTS_REQUIRED') {
-      await this.notifications.documentRequest(visaId, adminUserId, dto.reason?.trim() ? dto.reason : 'Additional documents required');
-    }
-
-    return { ok: true, visaId, status: next };
+  async applicantListCases(userId: string, q: ApplicantListVisaCasesQueryDto) {
+    const applicantId = await this.access.applicantIdForUser(userId);
+    return this.cases.listApplicant(
+      { applicantId, status: q.status, isActive: q.isActive },
+      this.page(q.page),
+      this.pageSize(q.pageSize, 20)
+    );
   }
 
-  async recordDecision(visaId: string, adminUserId: string, dto: any) {
-    const visa = await this.repo.findById(visaId);
-    if (!visa) throw new NotFoundException('Visa not found');
-
-    this.status.ensureCanDecide(visa.status);
-
-    this.status.ensureDecisionPayload(dto.decision, {
-      rejectionReason: dto.rejectionReason,
-      visaIssueDate: dto.visaIssueDate,
-      visaExpiryDate: dto.visaExpiryDate
-    });
-
-    if (dto.decision === 'REJECTED') {
-      const next = 'REJECTED';
-      this.status.ensureTransition(visa.status, next);
-
-      await this.repo.setStatus(visaId, next, {
-        decisionDate: new Date(),
-        remarks: dto.remarks ?? visa.remarks ?? null
-      });
-
-      await this.history.add({
-        visaApplicationId: visaId,
-        previousStatus: visa.status,
-        newStatus: next,
-        changedByAdminId: adminUserId,
-        changeReason: dto.rejectionReason ?? null
-      });
-
-      await this.notifications.decisionRecorded(visaId, adminUserId, `Visa rejected: ${dto.rejectionReason}`);
-
-      return { ok: true, visaId, status: next };
-    }
-
-    const next = 'APPROVED';
-    this.status.ensureTransition(visa.status, next);
-
-    await this.repo.setStatus(visaId, next, {
-      decisionDate: new Date(),
-      visaIssueDate: new Date(dto.visaIssueDate),
-      visaExpiryDate: new Date(dto.visaExpiryDate),
-      remarks: dto.remarks ?? visa.remarks ?? null
-    });
-
-    await this.history.add({
-      visaApplicationId: visaId,
-      previousStatus: visa.status,
-      newStatus: next,
-      changedByAdminId: adminUserId,
-      changeReason: null
-    });
-
-    await this.notifications.decisionRecorded(visaId, adminUserId, 'Visa approved');
-
-    return { ok: true, visaId, status: next };
+  async employerListCases(userId: string, q: EmployerListVisaCasesQueryDto) {
+    const employerId = await this.access.employerIdForUser(userId);
+    return this.cases.listEmployer(
+      { employerId, jobId: q.jobId, status: q.status, isActive: q.isActive },
+      this.page(q.page),
+      this.pageSize(q.pageSize, 50)
+    );
   }
 
-  async list(filters: any, page: number, pageSize: number) {
-    return this.repo.list(filters, page, pageSize);
+  private async getCaseOrThrow(id: string) {
+    const c = await this.cases.findById(id);
+    if (!c) throw new NotFoundException('Visa case not found');
+    return c;
   }
 
-  async get(visaId: string) {
-    const visa = await this.repo.findById(visaId);
-    if (!visa) throw new NotFoundException('Visa not found');
-    await this.autoExpireIfNeeded(visa);
-    return this.repo.findById(visaId);
+  private async ensureApplicantExists(applicantId: string) {
+    const a = await this.prisma.applicantProfile.findUnique({ where: { applicantId }, select: { applicantId: true } });
+    if (!a) throw new NotFoundException('Applicant not found');
   }
 
-  async applicantList(userId: string, status: string | undefined, page: number, pageSize: number) {
-    const applicantId = await this.access.getApplicantIdForUser(userId);
-    const result = await this.repo.listByApplicant(applicantId, status, page, pageSize);
-    await this.autoExpireIfNeededBatch(result.items);
-    return result;
+  private async ensureEmployerExists(employerId: string) {
+    const e = await this.prisma.employer.findUnique({ where: { id: employerId }, select: { id: true } });
+    if (!e) throw new NotFoundException('Employer not found');
   }
 
-  async applicantGet(userId: string, visaId: string) {
-    const applicantId = await this.access.getApplicantIdForUser(userId);
-    const visa = await this.repo.findById(visaId);
-    if (!visa) throw new NotFoundException('Visa not found');
-    this.access.ensureApplicantCanViewVisa(visa, applicantId);
-    await this.autoExpireIfNeeded(visa);
-    return this.repo.findById(visaId);
+  private async ensureJobExists(jobId: string) {
+    const j = await this.prisma.jobPosting.findUnique({ where: { id: jobId }, select: { id: true } });
+    if (!j) throw new NotFoundException('Job not found');
   }
 
-  async agencyList(agencyUserId: string, q: any, page: number, pageSize: number) {
-    const skip = (page - 1) * pageSize;
-
-    const where: any = { applicant: { createdBy: agencyUserId } };
-    if (q?.status) where.status = q.status;
-    if (q?.applicantId) where.applicantId = q.applicantId;
-
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.visaApplication.findMany({
-        where,
-        orderBy: { updatedAt: 'desc' },
-        skip,
-        take: pageSize
-      }),
-      this.prisma.visaApplication.count({ where })
-    ]);
-
-    await this.autoExpireIfNeededBatch(items);
-
-    return { items, total };
+  private async ensureSponsorExists(sponsorId: string) {
+    const s = await this.prisma.sponsor.findUnique({ where: { id: sponsorId }, select: { id: true } });
+    if (!s) throw new NotFoundException('Sponsor not found');
   }
 
-  async agencyGet(agencyUserId: string, visaId: string) {
-    const visa = await this.repo.findById(visaId);
-    if (!visa) throw new NotFoundException('Visa not found');
-    this.access.ensureAgencyCanViewVisa(visa, agencyUserId);
-    await this.autoExpireIfNeeded(visa);
-    return this.repo.findById(visaId);
-  }
-
-  async employerList(userId: string, q: any, page: number, pageSize: number) {
-    const employer = await this.access.getEmployerForUser(userId);
-    const skip = (page - 1) * pageSize;
-
-    const where: any = {
-      OR: [{ employerId: employer.id }, { job: { employerId: employer.id } }]
-    };
-    if (q?.status) where.status = q.status;
-    if (q?.applicantId) where.applicantId = q.applicantId;
-    if (q?.jobId) where.jobId = q.jobId;
-
-    const [items, total] = await this.prisma.$transaction([
-      this.prisma.visaApplication.findMany({
-        where,
-        orderBy: { updatedAt: 'desc' },
-        skip,
-        take: pageSize
-      }),
-      this.prisma.visaApplication.count({ where })
-    ]);
-
-    await this.autoExpireIfNeededBatch(items);
-
-    return { items, total };
-  }
-
-  async employerGet(userId: string, visaId: string) {
-    const employer = await this.access.getEmployerForUser(userId);
-    const visa = await this.repo.findById(visaId);
-    if (!visa) throw new NotFoundException('Visa not found');
-    this.access.ensureEmployerCanViewVisa(visa, employer.id);
-    await this.autoExpireIfNeeded(visa);
-    return this.repo.findById(visaId);
-  }
-
-  private async autoExpireIfNeeded(visa: any) {
-    if (!visa) return;
-    if (visa.status !== 'APPROVED') return;
-    if (!visa.visaExpiryDate) return;
-    const expiry = new Date(visa.visaExpiryDate).getTime();
-    if (Number.isNaN(expiry)) return;
-    if (expiry > Date.now()) return;
-
-    this.status.ensureTransition('APPROVED', 'EXPIRED');
-
-    await this.repo.setStatus(visa.id, 'EXPIRED', {});
-
-    await this.history.add({
-      visaApplicationId: visa.id,
-      previousStatus: 'APPROVED',
-      newStatus: 'EXPIRED',
-      changedByAdminId: null,
-      changeReason: 'Auto-expired'
-    });
-
-    await this.notifications.expiryAlert(visa.id, null, 'Visa status auto-updated to EXPIRED');
-  }
-
-  private async autoExpireIfNeededBatch(items: any[]) {
-    const candidates = (items ?? []).filter((v) => v?.status === 'APPROVED' && v?.visaExpiryDate);
-    for (const v of candidates) {
-      await this.autoExpireIfNeeded(v);
-    }
+  private async ensureUserExists(userId: string) {
+    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    if (!u) throw new NotFoundException('User not found');
   }
 }

@@ -17,6 +17,8 @@ export class JobPostingPrismaRepository extends JobPostingRepository {
         country: input.country,
         city: input.city ?? null,
         salaryRange: input.salaryRange ?? null,
+        thumbnailUrl: input.thumbnailUrl ?? null,
+        vacancies: input.vacancies,
         contractType: input.contractType,
         status: input.status ?? 'DRAFT'
       }
@@ -26,7 +28,12 @@ export class JobPostingPrismaRepository extends JobPostingRepository {
   update(jobId: string, input: any) {
     return this.prisma.jobPosting.update({
       where: { id: jobId },
-      data: input
+      data: {
+        ...input,
+        city: 'city' in input ? input.city ?? null : undefined,
+        salaryRange: 'salaryRange' in input ? input.salaryRange ?? null : undefined,
+        thumbnailUrl: 'thumbnailUrl' in input ? input.thumbnailUrl ?? null : undefined
+      }
     });
   }
 

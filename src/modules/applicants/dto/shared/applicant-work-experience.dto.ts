@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 
 export class ApplicantWorkExperienceDto {
   @ApiProperty({ example: 'Construction Electrician' })
@@ -7,28 +7,14 @@ export class ApplicantWorkExperienceDto {
   @MinLength(2)
   jobTitle!: string;
 
-  @ApiPropertyOptional({ example: 'ABC Construction PLC' })
-  @IsOptional()
-  @IsString()
-  employerName?: string;
-
   @ApiPropertyOptional({ example: 'Qatar' })
   @IsOptional()
   @IsString()
   country?: string;
 
-  @ApiPropertyOptional({ example: '2019-01-01' })
+  @ApiPropertyOptional({ example: 2 })
   @IsOptional()
-  @IsDateString()
-  startDate?: string;
-
-  @ApiPropertyOptional({ example: '2024-06-01' })
-  @IsOptional()
-  @IsDateString()
-  endDate?: string;
-
-  @ApiPropertyOptional({ example: 'Installed and maintained electrical systems; performed troubleshooting; ensured compliance with safety rules.' })
-  @IsOptional()
-  @IsString()
-  responsibilities?: string;
+  @IsInt()
+  @Min(0)
+  yearsWorked?: number;
 }

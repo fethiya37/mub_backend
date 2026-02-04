@@ -8,24 +8,34 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
     super();
   }
 
+  private includeAll() {
+    return {
+      skills: true,
+      qualifications: true,
+      workExperiences: true,
+      documents: true,
+      emergencyContacts: true
+    } as const;
+  }
+
   findById(applicantId: string) {
     return this.prisma.applicantProfile.findUnique({
       where: { applicantId },
-      include: { skills: true, qualifications: true, workExperiences: true, documents: true }
+      include: this.includeAll()
     });
   }
 
   findByPhone(phone: string) {
     return this.prisma.applicantProfile.findUnique({
       where: { phone },
-      include: { skills: true, qualifications: true, workExperiences: true, documents: true }
+      include: this.includeAll()
     });
   }
 
   findByUserId(userId: string) {
     return this.prisma.applicantProfile.findFirst({
       where: { userId },
-      include: { skills: true, qualifications: true, workExperiences: true, documents: true }
+      include: this.includeAll()
     });
   }
 
@@ -56,59 +66,100 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
     return this.prisma.$transaction(async (tx) => {
       const existing = await tx.applicantProfile.findUnique({
         where: { phone: input.phone },
-        include: { skills: true, qualifications: true, workExperiences: true, documents: true }
+        include: this.includeAll()
       });
 
       const baseData: any = {
         email: input.email ?? undefined,
+
         firstName: input.firstName ?? undefined,
+        middleName: input.middleName ?? undefined,
         lastName: input.lastName ?? undefined,
         gender: input.gender ?? undefined,
+
         dateOfBirth: input.dateOfBirth ?? undefined,
+        placeOfBirth: input.placeOfBirth ?? undefined,
         nationality: input.nationality ?? undefined,
-        region: input.region ?? undefined,
-        passportNumber: input.passportNumber ?? undefined,
-        passportExpiry: input.passportExpiry ?? undefined,
-        laborId: input.laborId ?? undefined,
-        address: input.address ?? undefined,
+        religion: input.religion ?? undefined,
         maritalStatus: input.maritalStatus ?? undefined,
-        visaNumber: input.visaNumber ?? undefined,
-        applicationNumber: input.applicationNumber ?? undefined,
-        barcodeValue: input.barcodeValue ?? undefined,
+        numberOfChildren: input.numberOfChildren ?? undefined,
+
+        height: input.height ?? undefined,
+        weight: input.weight ?? undefined,
+
+        laborId: input.laborId ?? undefined,
+
+        passportNumber: input.passportNumber ?? undefined,
+        passportPlace: input.passportPlace ?? undefined,
+        passportIssueDate: input.passportIssueDate ?? undefined,
+        passportExpiry: input.passportExpiry ?? undefined,
+
+        address: input.address ?? undefined,
+
         registrationSource: input.registrationSource ?? undefined,
         createdBy: input.createdBy ?? undefined
       };
 
       const profile = existing
         ? await tx.applicantProfile.update({
-            where: { applicantId: existing.applicantId },
-            data: baseData
-          })
+          where: { applicantId: existing.applicantId },
+          data: baseData
+        })
         : await tx.applicantProfile.create({
-            data: {
-              phone: input.phone,
-              email: input.email ?? null,
-              firstName: input.firstName ?? null,
-              lastName: input.lastName ?? null,
-              gender: input.gender ?? null,
-              dateOfBirth: input.dateOfBirth ?? null,
-              nationality: input.nationality ?? null,
-              region: input.region ?? null,
-              passportNumber: input.passportNumber ?? null,
-              passportExpiry: input.passportExpiry ?? null,
-              laborId: input.laborId ?? null,
-              address: input.address ?? null,
-              maritalStatus: input.maritalStatus ?? null,
-              visaNumber: input.visaNumber ?? null,
-              applicationNumber: input.applicationNumber ?? null,
-              barcodeValue: input.barcodeValue ?? null,
-              registrationSource: input.registrationSource ?? 'SELF',
-              createdBy: input.createdBy ?? null,
-              profileStatus: 'DRAFT'
-            }
-          });
+          data: {
+            phone: input.phone,
+
+            email: input.email ?? undefined,
+
+            applicationNumber: input.applicationNumber ?? this.generateApplicationNumber(),
+
+            firstName: input.firstName ?? null,
+            middleName: input.middleName ?? null,
+            lastName: input.lastName ?? null,
+            gender: input.gender ?? null,
+
+            dateOfBirth: input.dateOfBirth ?? null,
+            placeOfBirth: input.placeOfBirth ?? null,
+            nationality: input.nationality ?? null,
+            religion: input.religion ?? null,
+            maritalStatus: input.maritalStatus ?? null,
+            numberOfChildren: input.numberOfChildren ?? null,
+
+            height: input.height ?? null,
+            weight: input.weight ?? null,
+
+            laborId: input.laborId ?? null,
+
+            passportNumber: input.passportNumber ?? null,
+            passportPlace: input.passportPlace ?? null,
+            passportIssueDate: input.passportIssueDate ?? null,
+            passportExpiry: input.passportExpiry ?? null,
+
+            address: input.address ?? null,
+
+            registrationSource: input.registrationSource ?? 'SELF',
+            createdBy: input.createdBy ?? null,
+            profileStatus: 'DRAFT'
+          }
+        });
 
       const applicantId = profile.applicantId;
+
+      if (input.emergencyContacts) {
+        await tx.emergencyContact.deleteMany({ where: { applicantId } });
+        if (input.emergencyContacts.length) {
+          await tx.emergencyContact.createMany({
+            data: input.emergencyContacts.map((c) => ({
+              applicantId,
+              fullName: c.fullName,
+              phone: c.phone,
+              relationship: c.relationship,
+              address: c.address ?? null,
+              idFileUrl: c.idFileUrl ?? null
+            }))
+          });
+        }
+      }
 
       if (input.skills) {
         await tx.applicantSkill.deleteMany({ where: { applicantId } });
@@ -116,9 +167,7 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
           await tx.applicantSkill.createMany({
             data: input.skills.map((s) => ({
               applicantId,
-              skillName: s.skillName,
-              proficiencyLevel: s.proficiencyLevel ?? null,
-              yearsOfExperience: s.yearsOfExperience ?? null
+              skillName: s.skillName
             }))
           });
         }
@@ -130,10 +179,8 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
           await tx.applicantQualification.createMany({
             data: input.qualifications.map((q) => ({
               applicantId,
-              qualificationType: q.qualificationType,
-              institution: q.institution ?? null,
-              country: q.country ?? null,
-              yearCompleted: q.yearCompleted ?? null
+              qualification: q.qualification,
+              qualificationType: q.qualificationType
             }))
           });
         }
@@ -146,11 +193,8 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
             data: input.workExperiences.map((w) => ({
               applicantId,
               jobTitle: w.jobTitle,
-              employerName: w.employerName ?? null,
               country: w.country ?? null,
-              startDate: w.startDate ?? null,
-              endDate: w.endDate ?? null,
-              responsibilities: w.responsibilities ?? null
+              yearsWorked: w.yearsWorked ?? null
             }))
           });
         }
@@ -164,7 +208,7 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
               applicantId,
               documentType: d.documentType,
               fileUrl: d.fileUrl,
-              verificationStatus: d.verificationStatus ?? null
+              status: d.status ?? null
             }))
           });
         }
@@ -172,7 +216,7 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
 
       return tx.applicantProfile.findUnique({
         where: { applicantId },
-        include: { skills: true, qualifications: true, workExperiences: true, documents: true }
+        include: this.includeAll()
       });
     });
   }
@@ -201,15 +245,29 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
     return this.prisma.$transaction(async (tx) => {
       await tx.applicantProfile.update({ where: { applicantId }, data: patch });
 
+      if (patch.emergencyContacts) {
+        await tx.emergencyContact.deleteMany({ where: { applicantId } });
+        if (patch.emergencyContacts.length) {
+          await tx.emergencyContact.createMany({
+            data: patch.emergencyContacts.map((c: any) => ({
+              applicantId,
+              fullName: c.fullName,
+              phone: c.phone,
+              relationship: c.relationship,
+              address: c.address ?? null,
+              idFileUrl: c.idFileUrl ?? null
+            }))
+          });
+        }
+      }
+
       if (patch.skills) {
         await tx.applicantSkill.deleteMany({ where: { applicantId } });
         if (patch.skills.length) {
           await tx.applicantSkill.createMany({
             data: patch.skills.map((s: any) => ({
               applicantId,
-              skillName: s.skillName,
-              proficiencyLevel: s.proficiencyLevel ?? null,
-              yearsOfExperience: s.yearsOfExperience ?? null
+              skillName: s.skillName
             }))
           });
         }
@@ -221,10 +279,8 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
           await tx.applicantQualification.createMany({
             data: patch.qualifications.map((q: any) => ({
               applicantId,
-              qualificationType: q.qualificationType,
-              institution: q.institution ?? null,
-              country: q.country ?? null,
-              yearCompleted: q.yearCompleted ?? null
+              qualification: q.qualification,
+              qualificationType: q.qualificationType
             }))
           });
         }
@@ -237,11 +293,8 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
             data: patch.workExperiences.map((w: any) => ({
               applicantId,
               jobTitle: w.jobTitle,
-              employerName: w.employerName ?? null,
               country: w.country ?? null,
-              startDate: w.startDate ?? null,
-              endDate: w.endDate ?? null,
-              responsibilities: w.responsibilities ?? null
+              yearsWorked: w.yearsWorked ?? null
             }))
           });
         }
@@ -255,7 +308,7 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
               applicantId,
               documentType: d.documentType,
               fileUrl: d.fileUrl,
-              verificationStatus: d.verificationStatus ?? null
+              status: d.status ?? null
             }))
           });
         }
@@ -263,8 +316,18 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
 
       return tx.applicantProfile.findUnique({
         where: { applicantId },
-        include: { skills: true, qualifications: true, workExperiences: true, documents: true }
+        include: this.includeAll()
       });
     });
+  }
+
+  private pad(n: number, width: number) {
+    return String(n).padStart(width, '0');
+  }
+
+  private generateApplicationNumber() {
+    const y = new Date().getFullYear();
+    const rand = Math.floor(Math.random() * 1_000_000);
+    return `MUB-${y}-${this.pad(rand, 6)}`;
   }
 }

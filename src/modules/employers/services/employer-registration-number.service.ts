@@ -16,6 +16,6 @@ export class EmployerRegistrationNumberService {
     const d = String(date.getUTCDate()).padStart(2, '0');
 
     const rnd = crypto.randomBytes(4).toString('hex').toUpperCase();
-    return `EMP-${cc}-${y}${m}${d}-${rnd}`;
+    return `PAR-${cc}-${y}${m}${d}-${rnd}`;
   }
 }

@@ -1,132 +1,110 @@
-import { Body, Controller, Get, Param, Patch, Post, Put, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
+import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { CurrentUserDecorator } from '../../../common/decorators/current-user.decorator';
 import type { CurrentUser } from '../../../common/decorators/current-user.decorator';
-import { VisasService } from '../services/visas.service';
-import { VisaDocumentsService } from '../services/visa-documents.service';
-import { VisaComplianceService } from '../services/visa-compliance.service';
-import { AdminCreateVisaApplicationDto } from '../dto/admin/admin-create-visa-application.dto';
-import { AdminUpdateVisaApplicationDto } from '../dto/admin/admin-update-visa-application.dto';
-import { AdminListVisasQueryDto } from '../dto/admin/admin-list-visas.query.dto';
-import { AdminSubmitVisaDto } from '../dto/admin/admin-submit-visa.dto';
-import { AdminUpdateVisaStatusDto } from '../dto/admin/admin-update-visa-status.dto';
-import { AdminRecordVisaDecisionDto } from '../dto/admin/admin-record-visa-decision.dto';
-import { AdminUploadVisaDocumentDto } from '../dto/admin/admin-upload-visa-document.dto';
-import { AdminVerifyVisaDocumentDto } from '../dto/admin/admin-verify-visa-document.dto';
-import { AdminAddComplianceCheckDto } from '../dto/admin/admin-add-compliance-check.dto';
-import { AdminUpdateComplianceCheckDto } from '../dto/admin/admin-update-compliance-check.dto';
 
-@ApiTags('Admin Visas')
+import { VisasService } from '../services/visas.service';
+import { AdminCreateVisaCaseDto } from '../dto/admin/admin-create-visa-case.dto';
+import { AdminListVisaCasesQueryDto } from '../dto/admin/admin-list-visa-cases.query.dto';
+import { AdminAssignCaseManagerDto } from '../dto/admin/admin-assign-case-manager.dto';
+import { AdminUpsertMedicalDto } from '../dto/admin/admin-upsert-medical.dto';
+import { AdminUpsertInsuranceDto } from '../dto/admin/admin-upsert-insurance.dto';
+import { AdminSetFingerprintDto } from '../dto/admin/admin-set-fingerprint.dto';
+import { AdminUpsertEmbassyProcessDto } from '../dto/admin/admin-upsert-embassy-process.dto';
+import { AdminUpsertLmisProcessDto } from '../dto/admin/admin-upsert-lmis-process.dto';
+import { AdminCreateVisaAttemptDto } from '../dto/admin/admin-create-visa-attempt.dto';
+import { AdminCreateFlightBookingDto } from '../dto/admin/admin-create-flight-booking.dto';
+import { AdminCreateVisaReturnDto } from '../dto/admin/admin-create-visa-return.dto';
+import { AdminCloseVisaCaseDto } from '../dto/admin/admin-close-visa-case.dto';
+
+@ApiTags('Admin Visa')
 @ApiBearerAuth()
-@Controller('api/admin/visas')
-export class AdminVisasController {
-  constructor(
-    private readonly visas: VisasService,
-    private readonly docs: VisaDocumentsService,
-    private readonly compliance: VisaComplianceService
-  ) {}
+@Controller('api/admin/visa')
+export class AdminVisaController {
+  constructor(private readonly visas: VisasService) {}
 
   @RequirePermissions('VISA_CREATE')
-  @Post()
-  @ApiOperation({ summary: 'Create visa application (DRAFT)' })
-  create(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminCreateVisaApplicationDto) {
-    return this.visas.createDraft(user.userId, dto);
+  @Post('cases')
+  @ApiOperation({ summary: 'Create visa case (caseManagerUserId=auth user)' })
+  createCase(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminCreateVisaCaseDto) {
+    return this.visas.adminCreateCase(user.userId, dto);
   }
 
   @RequirePermissions('VISA_VIEW')
-  @Get()
-  @ApiOperation({ summary: 'List visas (paged, filters)' })
-  @ApiQuery({ name: 'status', required: false })
-  list(@Query() q: AdminListVisasQueryDto) {
-    return this.visas.list(
-      {
-        status: q.status,
-        applicantId: q.applicantId,
-        employerId: q.employerId,
-        jobId: q.jobId,
-        destinationCountry: q.destinationCountry,
-        visaType: q.visaType
-      },
-      q.page ? Number(q.page) : 1,
-      q.pageSize ? Number(q.pageSize) : 50
-    );
-  }
-
-  @RequirePermissions('VISA_VIEW')
-  @Get(':visaId')
-  @ApiOperation({ summary: 'Get visa details' })
-  get(@Param('visaId') visaId: string) {
-    return this.visas.get(visaId);
+  @Get('cases')
+  @ApiOperation({ summary: 'Admin list visa cases' })
+  listCases(@Query() q: AdminListVisaCasesQueryDto) {
+    return this.visas.adminListCases(q);
   }
 
   @RequirePermissions('VISA_UPDATE')
-  @Put(':visaId')
-  @ApiOperation({ summary: 'Update visa (DRAFT only)' })
-  update(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpdateVisaApplicationDto) {
-    return this.visas.updateDraft(visaId, user.userId, dto);
+  @Put('cases/:id/assign-manager')
+  @ApiOperation({ summary: 'Assign case manager' })
+  assignManager(@CurrentUserDecorator() user: CurrentUser, @Param('id') id: string, @Body() dto: AdminAssignCaseManagerDto) {
+    return this.visas.adminAssignCaseManager(user.userId, id, dto);
+  }
+
+  @RequirePermissions('MEDICAL_UPLOAD_RESULT')
+  @Post('medical')
+  @ApiOperation({ summary: 'Upsert medical and set case status to MEDICAL' })
+  upsertMedical(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpsertMedicalDto) {
+    return this.visas.adminUpsertMedical(user.userId, dto);
+  }
+
+  @RequirePermissions('VISA_UPDATE')
+  @Post('insurance')
+  @ApiOperation({ summary: 'Upsert insurance and set case status to INSURANCE' })
+  upsertInsurance(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpsertInsuranceDto) {
+    return this.visas.adminUpsertInsurance(user.userId, dto);
+  }
+
+  @RequirePermissions('VISA_UPDATE')
+  @Put('cases/:id/fingerprint')
+  @ApiOperation({ summary: 'Upsert fingerprint and set case status to FINGERPRINT' })
+  setFingerprint(@CurrentUserDecorator() user: CurrentUser, @Param('id') id: string, @Body() dto: AdminSetFingerprintDto) {
+    return this.visas.adminSetFingerprint(user.userId, id, dto);
+  }
+
+  @RequirePermissions('VISA_UPDATE')
+  @Post('embassy')
+  @ApiOperation({ summary: 'Upsert embassy process and set case status to EMBASSY' })
+  upsertEmbassy(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpsertEmbassyProcessDto) {
+    return this.visas.adminUpsertEmbassy(user.userId, dto);
+  }
+
+  @RequirePermissions('VISA_UPDATE')
+  @Post('lmis')
+  @ApiOperation({ summary: 'Upsert LMIS and set case status to LMIS' })
+  upsertLmis(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpsertLmisProcessDto) {
+    return this.visas.adminUpsertLMIS(user.userId, dto);
   }
 
   @RequirePermissions('VISA_SUBMIT')
-  @Post(':visaId/submit')
-  @ApiOperation({ summary: 'Submit visa (DRAFT -> SUBMITTED)' })
-  submit(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminSubmitVisaDto) {
-    return this.visas.submit(visaId, user.userId, dto);
+  @Post('attempts')
+  @ApiOperation({ summary: 'Create visa attempt (attemptNumber generated) and set case status to VISA' })
+  createAttempt(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminCreateVisaAttemptDto) {
+    return this.visas.adminCreateAttempt(user.userId, dto);
   }
 
-  @RequirePermissions('VISA_STATUS_UPDATE')
-  @Patch(':visaId/status')
-  @ApiOperation({ summary: 'Update visa status (state machine)' })
-  updateStatus(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpdateVisaStatusDto) {
-    return this.visas.updateStatus(visaId, user.userId, dto);
+  @RequirePermissions('VISA_UPDATE')
+  @Post('flights')
+  @ApiOperation({ summary: 'Create flight booking and set case status to FLIGHT_BOOKED' })
+  createFlight(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminCreateFlightBookingDto) {
+    return this.visas.adminCreateFlight(user.userId, dto);
   }
 
-  @RequirePermissions('VISA_DECIDE')
-  @Patch(':visaId/decision')
-  @ApiOperation({ summary: 'Record decision (approve/reject)' })
-  decision(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminRecordVisaDecisionDto) {
-    return this.visas.recordDecision(visaId, user.userId, dto);
+  @RequirePermissions('VISA_UPDATE')
+  @Post('returns')
+  @ApiOperation({ summary: 'Create return record and set case status to RETURNED' })
+  createReturn(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminCreateVisaReturnDto) {
+    return this.visas.adminCreateReturn(user.userId, dto);
   }
 
-  @RequirePermissions('VISA_DOCUMENT_UPLOAD')
-  @Post(':visaId/documents')
-  @ApiOperation({ summary: 'Upload visa document (versioned)' })
-  uploadDoc(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUploadVisaDocumentDto) {
-    return this.docs.upload(visaId, user.userId, dto);
-  }
-
-  @RequirePermissions('VISA_DOCUMENT_VERIFY')
-  @Patch('documents/:documentId/verify')
-  @ApiOperation({ summary: 'Verify/reject visa document' })
-  verifyDoc(@Param('documentId') documentId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminVerifyVisaDocumentDto) {
-    return this.docs.verify(documentId, user.userId, dto);
-  }
-
-  @RequirePermissions('VISA_COMPLIANCE_CHECK')
-  @Post(':visaId/compliance')
-  @ApiOperation({ summary: 'Add compliance check' })
-  addCompliance(@Param('visaId') visaId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminAddComplianceCheckDto) {
-    return this.compliance.add(visaId, user.userId, dto);
-  }
-
-  @RequirePermissions('VISA_COMPLIANCE_CHECK')
-  @Patch('compliance/:checkId')
-  @ApiOperation({ summary: 'Update compliance check status' })
-  updateCompliance(@Param('checkId') checkId: string, @CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpdateComplianceCheckDto) {
-    return this.compliance.update(checkId, user.userId, dto);
-  }
-
-  @RequirePermissions('VISA_VIEW')
-  @Get(':visaId/documents')
-  @ApiOperation({ summary: 'List visa documents' })
-  listDocs(@Param('visaId') visaId: string) {
-    return this.docs.list(visaId);
-  }
-
-  @RequirePermissions('VISA_VIEW')
-  @Get(':visaId/compliance')
-  @ApiOperation({ summary: 'List visa compliance checks' })
-  listCompliance(@Param('visaId') visaId: string) {
-    return this.compliance.listByVisa(visaId);
+  @RequirePermissions('VISA_UPDATE')
+  @Post('cases/:id/close')
+  @ApiOperation({ summary: 'Close case (isActive=false) and set status to CLOSED' })
+  closeCase(@CurrentUserDecorator() user: CurrentUser, @Param('id') id: string, @Body() dto: AdminCloseVisaCaseDto) {
+    return this.visas.adminCloseCase(user.userId, id, dto);
   }
 }

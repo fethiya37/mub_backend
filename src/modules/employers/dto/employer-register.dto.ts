@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
+import { IsDateString, IsEmail, IsOptional, IsString, IsUrl, MinLength } from 'class-validator';
 
 export class EmployerRegisterDto {
   @ApiProperty({ example: 'Al Noor Manpower LLC' })
@@ -35,6 +35,12 @@ export class EmployerRegisterDto {
   @IsString()
   @MinLength(3)
   ownerIdNumber!: string;
+
+  @ApiPropertyOptional({ example: 'https://files.example.com/owners/owner-id.pdf' })
+  @IsOptional()
+  @IsString()
+  @IsUrl()
+  ownerIdFileUrl?: string;
 
   @ApiProperty({ example: 'LIC-2025-000123' })
   @IsString()

@@ -4,7 +4,7 @@ import { ApplicantStatusService } from './applicant-status.service';
 
 @Injectable()
 export class ApplicantVerifiedService {
-  constructor(private readonly profiles: ApplicantProfileRepository, private readonly status: ApplicantStatusService) {}
+  constructor(private readonly profiles: ApplicantProfileRepository, private readonly status: ApplicantStatusService) { }
 
   async getByUserId(userId: string) {
     const profile = await this.profiles.findByUserId(userId);
@@ -19,19 +19,17 @@ export class ApplicantVerifiedService {
       email: dto.email ?? undefined,
       address: dto.address ?? undefined,
       maritalStatus: dto.maritalStatus ?? undefined,
-      visaNumber: dto.visaNumber ?? undefined,
-      applicationNumber: dto.applicationNumber ?? undefined,
-      barcodeValue: dto.barcodeValue ?? undefined
     };
 
     if (dto.skills) patch.skills = dto.skills.map((s: any) => ({ ...s }));
     if (dto.qualifications) patch.qualifications = dto.qualifications.map((q: any) => ({ ...q }));
     if (dto.workExperiences)
       patch.workExperiences = dto.workExperiences.map((w: any) => ({
-        ...w,
-        startDate: w.startDate ? new Date(w.startDate) : null,
-        endDate: w.endDate ? new Date(w.endDate) : null
+        jobTitle: w.jobTitle,
+        country: w.country ?? null,
+        yearsWorked: w.yearsWorked ?? null
       }));
+
     if (dto.documents) patch.documents = dto.documents.map((d: any) => ({ ...d }));
 
     return this.profiles.updateVerified(applicantId, patch);

@@ -8,6 +8,8 @@ export type EmployerCreateInput = {
 
   ownerName: string;
   ownerIdNumber: string;
+  ownerIdFileUrl?: string | null;
+
   licenseNumber: string;
   licenseFileUrl: string;
   licenseExpiry?: Date | null;

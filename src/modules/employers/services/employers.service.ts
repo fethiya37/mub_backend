@@ -13,7 +13,7 @@ export class EmployersService {
     private readonly audit: AuditService,
     private readonly regNo: EmployerRegistrationNumberService,
     private readonly validation: EmployerValidationService
-  ) {}
+  ) { }
 
   async register(dto: EmployerRegisterDto) {
     await this.ensureUnique(dto);
@@ -30,6 +30,8 @@ export class EmployersService {
 
       ownerName: dto.ownerName,
       ownerIdNumber: dto.ownerIdNumber,
+      ownerIdFileUrl: dto.ownerIdFileUrl ?? null,
+
       licenseNumber: dto.licenseNumber,
       licenseFileUrl: dto.licenseFileUrl,
       licenseExpiry,
@@ -62,12 +64,15 @@ export class EmployersService {
 
       ownerName: dto.ownerName,
       ownerIdNumber: dto.ownerIdNumber,
+      ownerIdFileUrl: dto.ownerIdFileUrl ?? null,
+
       licenseNumber: dto.licenseNumber,
       licenseFileUrl: dto.licenseFileUrl,
       licenseExpiry,
 
       createdBy: 'ADMIN'
     });
+
 
     await this.audit.log({
       performedBy,
@@ -112,6 +117,8 @@ export class EmployersService {
 
     ownerName: string;
     ownerIdNumber: string;
+    ownerIdFileUrl: string | null;
+
     licenseNumber: string;
     licenseFileUrl: string;
     licenseExpiry: Date | null;
@@ -137,4 +144,5 @@ export class EmployersService {
 
     throw new ConflictException('Failed to create employer');
   }
+
 }

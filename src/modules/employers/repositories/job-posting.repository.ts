@@ -4,6 +4,8 @@ export type JobCreateInput = {
   country: string;
   city?: string | null;
   salaryRange?: string | null;
+  thumbnailUrl?: string | null;
+  vacancies: number;
   contractType: 'FULL_TIME' | 'PART_TIME' | 'TEMPORARY' | 'CONTRACT' | 'OTHER';
   status?: 'DRAFT' | 'ACTIVE';
 };

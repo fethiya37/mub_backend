@@ -20,38 +20,47 @@ export class ApplicantsService {
     const passportExpiry = dto.passportExpiry ? new Date(dto.passportExpiry) : null;
     this.draftTokens.ensurePassportExpiry(passportExpiry);
 
+    const passportIssueDate = dto.passportIssueDate ? new Date(dto.passportIssueDate) : null;
+
     const profile = await this.profiles.upsertDraft({
       phone: dto.phone,
       email: dto.email ?? null,
 
       firstName: dto.firstName ?? null,
+      middleName: dto.middleName ?? null,
       lastName: dto.lastName ?? null,
       gender: dto.gender ?? null,
-      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
-      nationality: dto.nationality ?? null,
-      region: dto.region ?? null,
 
-      passportNumber: dto.passportNumber ?? null,
-      passportExpiry,
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+      placeOfBirth: dto.placeOfBirth ?? null,
+      nationality: dto.nationality ?? null,
+      religion: dto.religion ?? null,
+      maritalStatus: dto.maritalStatus ?? null,
+      numberOfChildren: dto.numberOfChildren ?? null,
+
+      height: dto.height ?? null,
+      weight: dto.weight ?? null,
+
       laborId: dto.laborId ?? null,
 
-      address: dto.address ?? null,
-      maritalStatus: dto.maritalStatus ?? null,
+      passportNumber: dto.passportNumber ?? null,
+      passportPlace: dto.passportPlace ?? null,
+      passportIssueDate,
+      passportExpiry,
 
-      visaNumber: dto.visaNumber ?? null,
-      applicationNumber: dto.applicationNumber ?? null,
-      barcodeValue: dto.barcodeValue ?? null,
+      address: dto.address ?? null,
 
       registrationSource: 'SELF',
       createdBy: null,
 
+      emergencyContacts: dto.emergencyContacts ? dto.emergencyContacts.map((c: any) => ({ ...c })) : undefined,
       skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
       qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
       workExperiences: dto.workExperiences
         ? dto.workExperiences.map((w: any) => ({
-            ...w,
-            startDate: w.startDate ? new Date(w.startDate) : null,
-            endDate: w.endDate ? new Date(w.endDate) : null
+            jobTitle: w.jobTitle,
+            country: w.country ?? null,
+            yearsWorked: w.yearsWorked ?? null
           }))
         : undefined,
       documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
@@ -70,38 +79,47 @@ export class ApplicantsService {
     const passportExpiry = dto.passportExpiry ? new Date(dto.passportExpiry) : null;
     this.draftTokens.ensurePassportExpiry(passportExpiry);
 
+    const passportIssueDate = dto.passportIssueDate ? new Date(dto.passportIssueDate) : null;
+
     const profile = await this.profiles.upsertDraft({
       phone: dto.phone,
       email: dto.email ?? null,
 
       firstName: dto.firstName ?? null,
+      middleName: dto.middleName ?? null,
       lastName: dto.lastName ?? null,
       gender: dto.gender ?? null,
-      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
-      nationality: dto.nationality ?? null,
-      region: dto.region ?? null,
 
-      passportNumber: dto.passportNumber ?? null,
-      passportExpiry,
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : null,
+      placeOfBirth: dto.placeOfBirth ?? null,
+      nationality: dto.nationality ?? null,
+      religion: dto.religion ?? null,
+      maritalStatus: dto.maritalStatus ?? null,
+      numberOfChildren: dto.numberOfChildren ?? null,
+
+      height: dto.height ?? null,
+      weight: dto.weight ?? null,
+
       laborId: dto.laborId ?? null,
 
-      address: dto.address ?? null,
-      maritalStatus: dto.maritalStatus ?? null,
+      passportNumber: dto.passportNumber ?? null,
+      passportPlace: dto.passportPlace ?? null,
+      passportIssueDate,
+      passportExpiry,
 
-      visaNumber: dto.visaNumber ?? null,
-      applicationNumber: dto.applicationNumber ?? null,
-      barcodeValue: dto.barcodeValue ?? null,
+      address: dto.address ?? null,
 
       registrationSource: 'AGENCY',
       createdBy: agentUserId,
 
+      emergencyContacts: dto.emergencyContacts ? dto.emergencyContacts.map((c: any) => ({ ...c })) : undefined,
       skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
       qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
       workExperiences: dto.workExperiences
         ? dto.workExperiences.map((w: any) => ({
-            ...w,
-            startDate: w.startDate ? new Date(w.startDate) : null,
-            endDate: w.endDate ? new Date(w.endDate) : null
+            jobTitle: w.jobTitle,
+            country: w.country ?? null,
+            yearsWorked: w.yearsWorked ?? null
           }))
         : undefined,
       documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
@@ -141,33 +159,40 @@ export class ApplicantsService {
       email: dto.email ?? profile.email,
 
       firstName: dto.firstName ?? profile.firstName,
+      middleName: dto.middleName ?? profile.middleName,
       lastName: dto.lastName ?? profile.lastName,
       gender: dto.gender ?? profile.gender,
-      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : profile.dateOfBirth,
-      nationality: dto.nationality ?? profile.nationality,
-      region: dto.region ?? profile.region,
 
-      passportNumber: dto.passportNumber ?? profile.passportNumber,
-      passportExpiry: dto.passportExpiry ? new Date(dto.passportExpiry) : profile.passportExpiry,
+      dateOfBirth: dto.dateOfBirth ? new Date(dto.dateOfBirth) : profile.dateOfBirth,
+      placeOfBirth: dto.placeOfBirth ?? profile.placeOfBirth,
+      nationality: dto.nationality ?? profile.nationality,
+      religion: dto.religion ?? profile.religion,
+      maritalStatus: dto.maritalStatus ?? profile.maritalStatus,
+      numberOfChildren: dto.numberOfChildren ?? profile.numberOfChildren,
+
+      height: dto.height ?? profile.height,
+      weight: dto.weight ?? profile.weight,
+
       laborId: dto.laborId ?? profile.laborId,
 
-      address: dto.address ?? profile.address,
-      maritalStatus: dto.maritalStatus ?? profile.maritalStatus,
+      passportNumber: dto.passportNumber ?? profile.passportNumber,
+      passportPlace: dto.passportPlace ?? profile.passportPlace,
+      passportIssueDate: dto.passportIssueDate ? new Date(dto.passportIssueDate) : profile.passportIssueDate,
+      passportExpiry: dto.passportExpiry ? new Date(dto.passportExpiry) : profile.passportExpiry,
 
-      visaNumber: dto.visaNumber ?? profile.visaNumber,
-      applicationNumber: dto.applicationNumber ?? profile.applicationNumber,
-      barcodeValue: dto.barcodeValue ?? profile.barcodeValue,
+      address: dto.address ?? profile.address,
 
       registrationSource: profile.registrationSource ?? 'SELF',
       createdBy: profile.createdBy ?? null,
 
+      emergencyContacts: dto.emergencyContacts ? dto.emergencyContacts.map((c: any) => ({ ...c })) : undefined,
       skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
       qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
       workExperiences: dto.workExperiences
         ? dto.workExperiences.map((w: any) => ({
-            ...w,
-            startDate: w.startDate ? new Date(w.startDate) : null,
-            endDate: w.endDate ? new Date(w.endDate) : null
+            jobTitle: w.jobTitle,
+            country: w.country ?? null,
+            yearsWorked: w.yearsWorked ?? null
           }))
         : undefined,
       documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
@@ -191,9 +216,13 @@ export class ApplicantsService {
       !profile.firstName ||
       !profile.lastName ||
       !profile.gender ||
-      !profile.region ||
+      !profile.dateOfBirth ||
+      !profile.placeOfBirth ||
       !profile.nationality ||
+      !profile.maritalStatus ||
       !profile.passportNumber ||
+      !profile.passportPlace ||
+      !profile.passportIssueDate ||
       !profile.passportExpiry ||
       !profile.laborId ||
       !profile.phone;
@@ -204,7 +233,7 @@ export class ApplicantsService {
     this.draftTokens.ensurePassportExpiry(profile.passportExpiry ?? null);
 
     const docTypes = new Set((profile.documents ?? []).map((d: any) => d.documentType));
-    const requiredDocs = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE', 'LABOR_ID'];
+    const requiredDocs = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE'];
     const missingDocs = requiredDocs.filter((t) => !docTypes.has(t));
     if (missingDocs.length) throw new BadRequestException(`Missing required documents: ${missingDocs.join(', ')}`);
 
@@ -229,9 +258,13 @@ export class ApplicantsService {
       !profile.firstName ||
       !profile.lastName ||
       !profile.gender ||
-      !profile.region ||
+      !profile.dateOfBirth ||
+      !profile.placeOfBirth ||
       !profile.nationality ||
+      !profile.maritalStatus ||
       !profile.passportNumber ||
+      !profile.passportPlace ||
+      !profile.passportIssueDate ||
       !profile.passportExpiry ||
       !profile.laborId ||
       !profile.phone;
@@ -242,7 +275,7 @@ export class ApplicantsService {
     this.draftTokens.ensurePassportExpiry(profile.passportExpiry ?? null);
 
     const docTypes = new Set((profile.documents ?? []).map((d: any) => d.documentType));
-    const requiredDocs = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE', 'LABOR_ID'];
+    const requiredDocs = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE'];
     const missingDocs = requiredDocs.filter((t) => !docTypes.has(t));
     if (missingDocs.length) throw new BadRequestException(`Missing required documents: ${missingDocs.join(', ')}`);
 

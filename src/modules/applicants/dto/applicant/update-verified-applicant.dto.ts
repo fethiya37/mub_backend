@@ -22,20 +22,6 @@ export class UpdateVerifiedApplicantDto {
   @IsString()
   maritalStatus?: string;
 
-  @ApiPropertyOptional({ example: 'VISA-1234567' })
-  @IsOptional()
-  @IsString()
-  visaNumber?: string;
-
-  @ApiPropertyOptional({ example: 'MOFA-9876543' })
-  @IsOptional()
-  @IsString()
-  applicationNumber?: string;
-
-  @ApiPropertyOptional({ example: 'VISA-1234567|MOFA-9876543' })
-  @IsOptional()
-  @IsString()
-  barcodeValue?: string;
 
   @ApiPropertyOptional({
     type: [ApplicantSkillDto],
@@ -59,7 +45,7 @@ export class UpdateVerifiedApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantWorkExperienceDto],
-    example: [{ jobTitle: 'Electrician', employerName: 'XYZ', country: 'UAE', startDate: '2020-01-01', endDate: '2022-12-31' }]
+    example: [{ jobTitle: 'Electrician',  country: 'UAE', yearsworked: 3}]
   })
   @IsOptional()
   @IsArray()

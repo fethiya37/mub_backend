@@ -1,25 +1,9 @@
-import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { IsString, MinLength } from 'class-validator';
 
 export class ApplicantQualificationDto {
-  @ApiProperty({ example: 'COC Level III' })
+  @ApiProperty({ example: 'High School' })
   @IsString()
   @MinLength(2)
-  qualificationType!: string;
-
-  @ApiPropertyOptional({ example: 'TVET College Addis Ababa' })
-  @IsOptional()
-  @IsString()
-  institution?: string;
-
-  @ApiPropertyOptional({ example: 'Ethiopia' })
-  @IsOptional()
-  @IsString()
-  country?: string;
-
-  @ApiPropertyOptional({ example: 2022 })
-  @IsOptional()
-  @IsInt()
-  @Min(1900)
-  yearCompleted?: number;
+  qualification!: string;
 }

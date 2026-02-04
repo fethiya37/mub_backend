@@ -1,10 +1,21 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { Type } from 'class-transformer';
-import { IsArray, IsDateString, IsEmail, IsIn, IsOptional, IsString, MinLength, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsDateString,
+  IsEmail,
+  IsIn,
+  IsNumber,
+  IsOptional,
+  IsString,
+  MinLength,
+  ValidateNested,
+} from 'class-validator';
 import { ApplicantSkillDto } from '../shared/applicant-skill.dto';
 import { ApplicantQualificationDto } from '../shared/applicant-qualification.dto';
 import { ApplicantWorkExperienceDto } from '../shared/applicant-work-experience.dto';
 import { ApplicantDocumentDto } from '../shared/applicant-document.dto';
+import { ApplicantEmergencyContactDto } from '../shared/applicant-emergency-contact.dto';
 import { Genders } from '../shared/enums.dto';
 import type { Gender } from '../shared/enums.dto';
 
@@ -27,6 +38,11 @@ export class DraftUpsertApplicantDto {
   @ApiPropertyOptional({ example: 'Seid' })
   @IsOptional()
   @IsString()
+  middleName?: string;
+
+  @ApiPropertyOptional({ example: 'Seid' })
+  @IsOptional()
+  @IsString()
   lastName?: string;
 
   @ApiPropertyOptional({ example: 'FEMALE', enum: Genders })
@@ -39,27 +55,42 @@ export class DraftUpsertApplicantDto {
   @IsDateString()
   dateOfBirth?: string;
 
+  @ApiPropertyOptional({ example: 'Addis Ababa' })
+  @IsOptional()
+  @IsString()
+  placeOfBirth?: string;
+
   @ApiPropertyOptional({ example: 'Ethiopian' })
   @IsOptional()
   @IsString()
   nationality?: string;
 
-  @ApiPropertyOptional({ example: 'Addis Ababa' })
+  @ApiPropertyOptional({ example: 'Islam' })
   @IsOptional()
   @IsString()
-  region?: string;
+  religion?: string;
 
-  @ApiPropertyOptional({ example: 'P12345678' })
+  @ApiPropertyOptional({ example: 'SINGLE' })
   @IsOptional()
   @IsString()
-  passportNumber?: string;
+  maritalStatus?: string;
 
-  @ApiPropertyOptional({ example: '2030-12-31' })
+  @ApiPropertyOptional({ example: 0 })
   @IsOptional()
-  @IsDateString()
-  passportExpiry?: string;
+  @IsNumber()
+  numberOfChildren?: number;
 
-  @ApiPropertyOptional({ example: 'EF12345678', description: 'EF######## for FEMALE, EM######## for MALE' })
+  @ApiPropertyOptional({ example: 165 })
+  @IsOptional()
+  @IsNumber()
+  height?: number;
+
+  @ApiPropertyOptional({ example: 58 })
+  @IsOptional()
+  @IsNumber()
+  weight?: number;
+
+  @ApiPropertyOptional({ example: 'EF12345678' })
   @IsOptional()
   @IsString()
   laborId?: string;
@@ -69,32 +100,50 @@ export class DraftUpsertApplicantDto {
   @IsString()
   address?: string;
 
-  @ApiPropertyOptional({ example: 'SINGLE' })
+  @ApiPropertyOptional({ example: 'P12345678' })
   @IsOptional()
   @IsString()
-  maritalStatus?: string;
+  passportNumber?: string;
 
-  @ApiPropertyOptional({ example: 'VISA-1234567' })
+  @ApiPropertyOptional({ example: 'Addis Ababa' })
   @IsOptional()
   @IsString()
-  visaNumber?: string;
+  passportPlace?: string;
 
-  @ApiPropertyOptional({ example: 'MOFA-9876543' })
+  @ApiPropertyOptional({ example: '2020-01-01' })
   @IsOptional()
-  @IsString()
-  applicationNumber?: string;
+  @IsDateString()
+  passportIssueDate?: string;
 
-  @ApiPropertyOptional({ example: 'VISA-1234567|MOFA-9876543' })
+  @ApiPropertyOptional({ example: '2030-12-31' })
   @IsOptional()
-  @IsString()
-  barcodeValue?: string;
+  @IsDateString()
+  passportExpiry?: string;
+
+  @ApiPropertyOptional({
+    type: [ApplicantEmergencyContactDto],
+    example: [
+      {
+        fullName: 'Ahmed Seid',
+        phone: '+251922222222',
+        relationship: 'Brother',
+        address: 'Addis Ababa, Ethiopia',
+        idFileUrl: 'https://files.example.com/emergency-contact-id.pdf'
+      },
+    ],
+  })
+
+  @IsOptional()
+  @IsArray()
+  @ValidateNested({ each: true })
+  @Type(() => ApplicantEmergencyContactDto)
+  emergencyContacts?: ApplicantEmergencyContactDto[];
 
   @ApiPropertyOptional({
     type: [ApplicantSkillDto],
     example: [
       { skillName: 'Electrical Wiring & Installation', proficiencyLevel: 'ADVANCED', yearsOfExperience: 6 },
-      { skillName: 'Troubleshooting', proficiencyLevel: 'INTERMEDIATE', yearsOfExperience: 4 }
-    ]
+    ],
   })
   @IsOptional()
   @IsArray()
@@ -104,7 +153,7 @@ export class DraftUpsertApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantQualificationDto],
-    example: [{ qualificationType: 'COC Level III', institution: 'TVET', country: 'Ethiopia', yearCompleted: 2022 }]
+    example: [{ qualificationType: 'COC Level III', institution: 'TVET', country: 'Ethiopia', yearCompleted: 2022 }],
   })
   @IsOptional()
   @IsArray()
@@ -117,13 +166,10 @@ export class DraftUpsertApplicantDto {
     example: [
       {
         jobTitle: 'Construction Electrician',
-        employerName: 'ABC Construction PLC',
         country: 'Ethiopia',
-        startDate: '2019-01-01',
-        endDate: '2024-06-01',
-        responsibilities: 'Installed and maintained wiring, troubleshooting, ensured safety compliance.'
-      }
-    ]
+        yearsworked: 3,
+      },
+    ],
   })
   @IsOptional()
   @IsArray()
@@ -134,11 +180,11 @@ export class DraftUpsertApplicantDto {
   @ApiPropertyOptional({
     type: [ApplicantDocumentDto],
     example: [
-      { documentType: 'PASSPORT', fileUrl: 'https://files.example.com/applicants/uuid/passport.pdf' },
-      { documentType: 'PERSONAL_PHOTO', fileUrl: 'https://files.example.com/applicants/uuid/photo.jpg' },
-      { documentType: 'COC_CERTIFICATE', fileUrl: 'https://files.example.com/applicants/uuid/coc.pdf' },
-      { documentType: 'LABOR_ID', fileUrl: 'https://files.example.com/applicants/uuid/labor-id.pdf' }
-    ]
+      { documentType: 'PASSPORT', fileUrl: 'https://files.example.com/passport.pdf' },
+      { documentType: 'PERSONAL_PHOTO', fileUrl: 'https://files.example.com/photo.jpg' },
+      { documentType: 'COC', fileUrl: 'https://files.example.com/coc.pdf' },
+      { documentType: 'APPLICANT_ID', fileUrl: 'https://files.example.com/national-id.pdf' },
+    ],
   })
   @IsOptional()
   @IsArray()
