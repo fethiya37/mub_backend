@@ -16,6 +16,8 @@ export type ApplicantProfileUpsertInput = {
   maritalStatus?: string | null;
   numberOfChildren?: number | null;
 
+  occupation?: string | null;
+
   height?: number | null;
   weight?: number | null;
 
@@ -41,9 +43,9 @@ export type ApplicantProfileUpsertInput = {
   }[]
   | undefined;
 
-  skills?: { skillName: string }[] | undefined;
+  skills?: { skillId: string; hasSkill?: boolean; willingToLearn?: boolean }[] | undefined;
 
-  qualifications?: { qualification: string; qualificationType: string }[] | undefined;
+  qualifications?: { qualification: string }[] | undefined;
 
   workExperiences?: { jobTitle: string; country?: string | null; yearsWorked?: number | null }[] | undefined;
 

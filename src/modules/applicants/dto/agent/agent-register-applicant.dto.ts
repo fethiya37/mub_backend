@@ -75,6 +75,12 @@ export class AgentRegisterApplicantDto {
   @IsString()
   maritalStatus?: string;
 
+  @ApiPropertyOptional({ example: 'Electrician' })
+  @IsOptional()
+  @IsString()
+  occupation?: string;
+
+
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsNumber()
@@ -132,35 +138,46 @@ export class AgentRegisterApplicantDto {
       },
     ],
   })
-
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ApplicantEmergencyContactDto)
   emergencyContacts?: ApplicantEmergencyContactDto[];
 
-  @ApiPropertyOptional({ type: [ApplicantSkillDto] })
+  @ApiPropertyOptional({
+    type: [ApplicantSkillDto],
+    example: [{ skillId: 'uuid-skill-id', hasSkill: true, willingToLearn: false }],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ApplicantSkillDto)
   skills?: ApplicantSkillDto[];
 
-  @ApiPropertyOptional({ type: [ApplicantQualificationDto] })
+  @ApiPropertyOptional({
+    type: [ApplicantQualificationDto],
+    example: [{ qualification: 'COC Level III' }],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ApplicantQualificationDto)
   qualifications?: ApplicantQualificationDto[];
 
-  @ApiPropertyOptional({ type: [ApplicantWorkExperienceDto] })
+  @ApiPropertyOptional({
+    type: [ApplicantWorkExperienceDto],
+    example: [{ jobTitle: 'Electrician', country: 'UAE', yearsWorked: 3 }],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
   @Type(() => ApplicantWorkExperienceDto)
   workExperiences?: ApplicantWorkExperienceDto[];
 
-  @ApiPropertyOptional({ type: [ApplicantDocumentDto] })
+  @ApiPropertyOptional({
+    type: [ApplicantDocumentDto],
+    example: [{ documentType: 'PASSPORT', fileUrl: 'https://files.example.com/applicants/uuid/passport.pdf', status: 'PENDING' }],
+  })
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })

@@ -19,10 +19,18 @@ export class ApplicantVerifiedService {
       email: dto.email ?? undefined,
       address: dto.address ?? undefined,
       maritalStatus: dto.maritalStatus ?? undefined,
+      occupation: dto.occupation ?? undefined,
     };
 
-    if (dto.skills) patch.skills = dto.skills.map((s: any) => ({ ...s }));
-    if (dto.qualifications) patch.qualifications = dto.qualifications.map((q: any) => ({ ...q }));
+    if (dto.skills)
+      patch.skills = dto.skills.map((s: any) => ({
+        skillId: s.skillId,
+        hasSkill: s.hasSkill ?? true,
+        willingToLearn: s.willingToLearn ?? false
+      }));
+
+    if (dto.qualifications) patch.qualifications = dto.qualifications.map((q: any) => ({ qualification: q.qualification }));
+
     if (dto.workExperiences)
       patch.workExperiences = dto.workExperiences.map((w: any) => ({
         jobTitle: w.jobTitle,

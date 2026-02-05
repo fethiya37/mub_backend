@@ -75,6 +75,11 @@ export class DraftUpsertApplicantDto {
   @IsString()
   maritalStatus?: string;
 
+  @ApiPropertyOptional({ example: 'Electrician' })
+  @IsOptional()
+  @IsString()
+  occupation?: string;
+
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsNumber()
@@ -132,7 +137,6 @@ export class DraftUpsertApplicantDto {
       },
     ],
   })
-
   @IsOptional()
   @IsArray()
   @ValidateNested({ each: true })
@@ -141,9 +145,7 @@ export class DraftUpsertApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantSkillDto],
-    example: [
-      { skillName: 'Electrical Wiring & Installation', proficiencyLevel: 'ADVANCED', yearsOfExperience: 6 },
-    ],
+    example: [{ skillId: 'uuid-skill-id', hasSkill: true, willingToLearn: false }],
   })
   @IsOptional()
   @IsArray()
@@ -153,7 +155,7 @@ export class DraftUpsertApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantQualificationDto],
-    example: [{ qualificationType: 'COC Level III', institution: 'TVET', country: 'Ethiopia', yearCompleted: 2022 }],
+    example: [{ qualification: 'COC Level III' }],
   })
   @IsOptional()
   @IsArray()
@@ -167,7 +169,7 @@ export class DraftUpsertApplicantDto {
       {
         jobTitle: 'Construction Electrician',
         country: 'Ethiopia',
-        yearsworked: 3,
+        yearsWorked: 3,
       },
     ],
   })
@@ -182,7 +184,7 @@ export class DraftUpsertApplicantDto {
     example: [
       { documentType: 'PASSPORT', fileUrl: 'https://files.example.com/passport.pdf' },
       { documentType: 'PERSONAL_PHOTO', fileUrl: 'https://files.example.com/photo.jpg' },
-      { documentType: 'COC', fileUrl: 'https://files.example.com/coc.pdf' },
+      { documentType: 'COC_CERTIFICATE', fileUrl: 'https://files.example.com/coc.pdf' },
       { documentType: 'APPLICANT_ID', fileUrl: 'https://files.example.com/national-id.pdf' },
     ],
   })

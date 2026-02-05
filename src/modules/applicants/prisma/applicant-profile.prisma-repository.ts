@@ -10,7 +10,7 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
 
   private includeAll() {
     return {
-      skills: true,
+      skills: { include: { skill: true } },
       qualifications: true,
       workExperiences: true,
       documents: true,
@@ -84,6 +84,8 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
         maritalStatus: input.maritalStatus ?? undefined,
         numberOfChildren: input.numberOfChildren ?? undefined,
 
+        occupation: input.occupation ?? undefined,
+
         height: input.height ?? undefined,
         weight: input.weight ?? undefined,
 
@@ -124,6 +126,8 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
             religion: input.religion ?? null,
             maritalStatus: input.maritalStatus ?? null,
             numberOfChildren: input.numberOfChildren ?? null,
+
+            occupation: input.occupation ?? null,
 
             height: input.height ?? null,
             weight: input.weight ?? null,
@@ -167,7 +171,9 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
           await tx.applicantSkill.createMany({
             data: input.skills.map((s) => ({
               applicantId,
-              skillName: s.skillName
+              skillId: s.skillId,
+              hasSkill: s.hasSkill ?? true,
+              willingToLearn: s.willingToLearn ?? false
             }))
           });
         }
@@ -179,8 +185,7 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
           await tx.applicantQualification.createMany({
             data: input.qualifications.map((q) => ({
               applicantId,
-              qualification: q.qualification,
-              qualificationType: q.qualificationType
+              qualification: q.qualification
             }))
           });
         }
@@ -267,7 +272,9 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
           await tx.applicantSkill.createMany({
             data: patch.skills.map((s: any) => ({
               applicantId,
-              skillName: s.skillName
+              skillId: s.skillId,
+              hasSkill: s.hasSkill ?? true,
+              willingToLearn: s.willingToLearn ?? false
             }))
           });
         }
@@ -279,8 +286,7 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
           await tx.applicantQualification.createMany({
             data: patch.qualifications.map((q: any) => ({
               applicantId,
-              qualification: q.qualification,
-              qualificationType: q.qualificationType
+              qualification: q.qualification
             }))
           });
         }

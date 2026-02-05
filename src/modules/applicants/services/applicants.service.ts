@@ -9,7 +9,7 @@ export class ApplicantsService {
     private readonly profiles: ApplicantProfileRepository,
     private readonly status: ApplicantStatusService,
     private readonly draftTokens: ApplicantDraftTokenService
-  ) {}
+  ) { }
 
   async draftUpsert(dto: any) {
     const existing = await this.profiles.findByPhone(dto.phone);
@@ -38,6 +38,8 @@ export class ApplicantsService {
       maritalStatus: dto.maritalStatus ?? null,
       numberOfChildren: dto.numberOfChildren ?? null,
 
+      occupation: dto.occupation ?? null,
+
       height: dto.height ?? null,
       weight: dto.weight ?? null,
 
@@ -54,14 +56,20 @@ export class ApplicantsService {
       createdBy: null,
 
       emergencyContacts: dto.emergencyContacts ? dto.emergencyContacts.map((c: any) => ({ ...c })) : undefined,
-      skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
-      qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
+      skills: dto.skills
+        ? dto.skills.map((s: any) => ({
+          skillId: s.skillId,
+          hasSkill: s.hasSkill ?? true,
+          willingToLearn: s.willingToLearn ?? false
+        }))
+        : undefined,
+      qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ qualification: q.qualification })) : undefined,
       workExperiences: dto.workExperiences
         ? dto.workExperiences.map((w: any) => ({
-            jobTitle: w.jobTitle,
-            country: w.country ?? null,
-            yearsWorked: w.yearsWorked ?? null
-          }))
+          jobTitle: w.jobTitle,
+          country: w.country ?? null,
+          yearsWorked: w.yearsWorked ?? null
+        }))
         : undefined,
       documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
     });
@@ -97,6 +105,8 @@ export class ApplicantsService {
       maritalStatus: dto.maritalStatus ?? null,
       numberOfChildren: dto.numberOfChildren ?? null,
 
+      occupation: dto.occupation ?? null,
+
       height: dto.height ?? null,
       weight: dto.weight ?? null,
 
@@ -113,14 +123,20 @@ export class ApplicantsService {
       createdBy: agentUserId,
 
       emergencyContacts: dto.emergencyContacts ? dto.emergencyContacts.map((c: any) => ({ ...c })) : undefined,
-      skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
-      qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
+      skills: dto.skills
+        ? dto.skills.map((s: any) => ({
+          skillId: s.skillId,
+          hasSkill: s.hasSkill ?? true,
+          willingToLearn: s.willingToLearn ?? false
+        }))
+        : undefined,
+      qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ qualification: q.qualification })) : undefined,
       workExperiences: dto.workExperiences
         ? dto.workExperiences.map((w: any) => ({
-            jobTitle: w.jobTitle,
-            country: w.country ?? null,
-            yearsWorked: w.yearsWorked ?? null
-          }))
+          jobTitle: w.jobTitle,
+          country: w.country ?? null,
+          yearsWorked: w.yearsWorked ?? null
+        }))
         : undefined,
       documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
     });
@@ -170,6 +186,8 @@ export class ApplicantsService {
       maritalStatus: dto.maritalStatus ?? profile.maritalStatus,
       numberOfChildren: dto.numberOfChildren ?? profile.numberOfChildren,
 
+      occupation: dto.occupation ?? profile.occupation,
+
       height: dto.height ?? profile.height,
       weight: dto.weight ?? profile.weight,
 
@@ -186,14 +204,20 @@ export class ApplicantsService {
       createdBy: profile.createdBy ?? null,
 
       emergencyContacts: dto.emergencyContacts ? dto.emergencyContacts.map((c: any) => ({ ...c })) : undefined,
-      skills: dto.skills ? dto.skills.map((s: any) => ({ ...s })) : undefined,
-      qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ ...q })) : undefined,
+      skills: dto.skills
+        ? dto.skills.map((s: any) => ({
+          skillId: s.skillId,
+          hasSkill: s.hasSkill ?? true,
+          willingToLearn: s.willingToLearn ?? false
+        }))
+        : undefined,
+      qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ qualification: q.qualification })) : undefined,
       workExperiences: dto.workExperiences
         ? dto.workExperiences.map((w: any) => ({
-            jobTitle: w.jobTitle,
-            country: w.country ?? null,
-            yearsWorked: w.yearsWorked ?? null
-          }))
+          jobTitle: w.jobTitle,
+          country: w.country ?? null,
+          yearsWorked: w.yearsWorked ?? null
+        }))
         : undefined,
       documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
     };
@@ -220,6 +244,7 @@ export class ApplicantsService {
       !profile.placeOfBirth ||
       !profile.nationality ||
       !profile.maritalStatus ||
+      !profile.occupation ||
       !profile.passportNumber ||
       !profile.passportPlace ||
       !profile.passportIssueDate ||

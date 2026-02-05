@@ -31,6 +31,9 @@ export const PERMISSIONS = [
   'APPLICANT_DOCUMENT_UPLOAD',
   'APPLICANT_DOCUMENT_VERIFY',
 
+  'SKILL_VIEW',
+  'SKILL_MANAGE',
+
   'LOCAL_AGENCY_SELF_REGISTER',
   'LOCAL_AGENCY_SELF_VIEW',
   'LOCAL_AGENCY_SELF_UPDATE',
@@ -118,6 +121,9 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICANT_DOCUMENT_UPLOAD',
     'APPLICANT_DOCUMENT_VERIFY',
 
+    'SKILL_VIEW',
+    'SKILL_MANAGE',
+
     'LOCAL_AGENCY_VIEW',
     'EMPLOYER_VIEW',
     'JOB_VIEW',
@@ -159,6 +165,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICANT_VIEW',
     'APPLICANT_DOCUMENT_UPLOAD',
 
+    'SKILL_VIEW',
+
     'PLACEMENT_VIEW',
     'VISA_VIEW',
 
@@ -173,6 +181,8 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICANT_SELF_UPDATE',
     'APPLICANT_SELF_DOCUMENT_UPLOAD',
     'APPLICANT_SELF_STATUS_TRACK',
+
+    'SKILL_VIEW',
 
     'JOB_VIEW',
 

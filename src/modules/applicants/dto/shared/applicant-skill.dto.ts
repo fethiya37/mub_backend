@@ -1,9 +1,18 @@
-import { ApiProperty,  } from '@nestjs/swagger';
-import { IsString, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsBoolean, IsOptional, IsUUID } from 'class-validator';
 
 export class ApplicantSkillDto {
-  @ApiProperty({ example: 'Electrical Wiring & Installation' })
-  @IsString()
-  @MinLength(2)
-  skillName!: string;
+  @ApiProperty({ example: 'uuid-skill-id' })
+  @IsUUID()
+  skillId!: string;
+
+  @ApiPropertyOptional({ example: true, default: true })
+  @IsOptional()
+  @IsBoolean()
+  hasSkill?: boolean;
+
+  @ApiPropertyOptional({ example: false, default: false })
+  @IsOptional()
+  @IsBoolean()
+  willingToLearn?: boolean;
 }

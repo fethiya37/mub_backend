@@ -207,6 +207,7 @@ CREATE TABLE "ApplicantProfile" (
     "religion" TEXT,
     "maritalStatus" TEXT,
     "numberOfChildren" INTEGER,
+    "occupation" TEXT,
     "phone" TEXT NOT NULL,
     "email" TEXT,
     "address" TEXT,
@@ -260,10 +261,22 @@ CREATE TABLE "ApplicantDocument" (
 );
 
 -- CreateTable
+CREATE TABLE "Skill" (
+    "id" TEXT NOT NULL,
+    "name" TEXT NOT NULL,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+    "updatedAt" TIMESTAMP(3) NOT NULL,
+
+    CONSTRAINT "Skill_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
 CREATE TABLE "ApplicantSkill" (
     "id" TEXT NOT NULL,
     "applicantId" TEXT NOT NULL,
-    "skillName" TEXT NOT NULL,
+    "skillId" TEXT NOT NULL,
+    "hasSkill" BOOLEAN NOT NULL DEFAULT true,
+    "willingToLearn" BOOLEAN NOT NULL DEFAULT false,
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 
@@ -654,7 +667,16 @@ CREATE INDEX "ApplicantDocument_documentType_idx" ON "ApplicantDocument"("docume
 CREATE UNIQUE INDEX "ApplicantDocument_applicantId_documentType_key" ON "ApplicantDocument"("applicantId", "documentType");
 
 -- CreateIndex
-CREATE UNIQUE INDEX "ApplicantSkill_applicantId_skillName_key" ON "ApplicantSkill"("applicantId", "skillName");
+CREATE UNIQUE INDEX "Skill_name_key" ON "Skill"("name");
+
+-- CreateIndex
+CREATE INDEX "ApplicantSkill_applicantId_idx" ON "ApplicantSkill"("applicantId");
+
+-- CreateIndex
+CREATE INDEX "ApplicantSkill_skillId_idx" ON "ApplicantSkill"("skillId");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "ApplicantSkill_applicantId_skillId_key" ON "ApplicantSkill"("applicantId", "skillId");
 
 -- CreateIndex
 CREATE INDEX "ApplicantQualification_applicantId_idx" ON "ApplicantQualification"("applicantId");
@@ -877,6 +899,9 @@ ALTER TABLE "ApplicantDocument" ADD CONSTRAINT "ApplicantDocument_applicantId_fk
 
 -- AddForeignKey
 ALTER TABLE "ApplicantSkill" ADD CONSTRAINT "ApplicantSkill_applicantId_fkey" FOREIGN KEY ("applicantId") REFERENCES "ApplicantProfile"("applicantId") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "ApplicantSkill" ADD CONSTRAINT "ApplicantSkill_skillId_fkey" FOREIGN KEY ("skillId") REFERENCES "Skill"("id") ON DELETE RESTRICT ON UPDATE CASCADE;
 
 -- AddForeignKey
 ALTER TABLE "ApplicantQualification" ADD CONSTRAINT "ApplicantQualification_applicantId_fkey" FOREIGN KEY ("applicantId") REFERENCES "ApplicantProfile"("applicantId") ON DELETE CASCADE ON UPDATE CASCADE;

@@ -242,6 +242,8 @@ model ApplicantProfile {
   maritalStatus    String?
   numberOfChildren Int?
 
+  occupation String?
+
   phone   String  @unique
   email   String?
   address String?
@@ -321,17 +323,33 @@ model ApplicantDocument {
   @@index([documentType])
 }
 
+model Skill {
+  id   String @id @default(uuid())
+  name String @unique
+
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  applicants ApplicantSkill[]
+}
+
 model ApplicantSkill {
   id          String @id @default(uuid())
   applicantId String
-  skillName   String
+  skillId     String
+
+  hasSkill       Boolean @default(true)
+  willingToLearn Boolean @default(false)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
   applicant ApplicantProfile @relation(fields: [applicantId], references: [applicantId], onDelete: Cascade)
+  skill     Skill            @relation(fields: [skillId], references: [id], onDelete: Restrict)
 
-  @@unique([applicantId, skillName])
+  @@unique([applicantId, skillId])
+  @@index([applicantId])
+  @@index([skillId])
 }
 
 model ApplicantQualification {

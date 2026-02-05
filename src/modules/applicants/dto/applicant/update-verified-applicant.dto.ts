@@ -22,10 +22,15 @@ export class UpdateVerifiedApplicantDto {
   @IsString()
   maritalStatus?: string;
 
+  @ApiPropertyOptional({ example: 'Electrician' })
+  @IsOptional()
+  @IsString()
+  occupation?: string;
+
 
   @ApiPropertyOptional({
     type: [ApplicantSkillDto],
-    example: [{ skillName: 'Team Collaboration', proficiencyLevel: 'ADVANCED', yearsOfExperience: 5 }]
+    example: [{ skillId: 'uuid-skill-id', hasSkill: true, willingToLearn: false }]
   })
   @IsOptional()
   @IsArray()
@@ -35,7 +40,7 @@ export class UpdateVerifiedApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantQualificationDto],
-    example: [{ qualificationType: 'Safety Training', institution: 'Training Center', country: 'Ethiopia', yearCompleted: 2023 }]
+    example: [{ qualification: 'Safety Training' }]
   })
   @IsOptional()
   @IsArray()
@@ -45,7 +50,7 @@ export class UpdateVerifiedApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantWorkExperienceDto],
-    example: [{ jobTitle: 'Electrician',  country: 'UAE', yearsworked: 3}]
+    example: [{ jobTitle: 'Electrician', country: 'UAE', yearsWorked: 3 }]
   })
   @IsOptional()
   @IsArray()
@@ -55,7 +60,7 @@ export class UpdateVerifiedApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantDocumentDto],
-    example: [{ documentType: 'OTHER', fileUrl: 'https://files.example.com/applicants/uuid/extra.pdf', verificationStatus: 'PENDING' }]
+    example: [{ documentType: 'OTHER', fileUrl: 'https://files.example.com/applicants/uuid/extra.pdf', status: 'PENDING' }]
   })
   @IsOptional()
   @IsArray()
