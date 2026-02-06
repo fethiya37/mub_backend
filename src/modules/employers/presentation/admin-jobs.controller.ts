@@ -1,5 +1,5 @@
-import { Body, Controller, Post, Put, UploadedFile, UseInterceptors } from '@nestjs/common';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Put, Query, UploadedFile, UseInterceptors } from '@nestjs/common';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { FileInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import crypto from 'crypto';
@@ -12,7 +12,6 @@ import type { CurrentUser } from '../../../common/decorators/current-user.decora
 import { EmployerJobsService } from '../services/employer-jobs.service';
 import { AdminCreateJobForEmployerDto } from '../dto/admin/admin-create-job-for-employer.dto';
 import { AdminUpdateJobForEmployerDto } from '../dto/admin/admin-update-job-for-employer.dto';
-
 import { buildUploadsRoot, ensureDir, maxUploadBytes, safeExt } from '../../../common/utils/upload/upload.utils';
 
 function jobThumbDiskStorage() {
@@ -37,6 +36,33 @@ function jobThumbDiskStorage() {
 export class AdminJobsController {
   constructor(private readonly jobs: EmployerJobsService) {}
 
+  @RequirePermissions('JOB_VIEW')
+  @Get()
+  @ApiOperation({ summary: 'List jobs (Admin)' })
+  @ApiQuery({ name: 'status', required: false, enum: ['DRAFT', 'ACTIVE', 'CLOSED'] })
+  @ApiQuery({ name: 'employerId', required: false })
+  @ApiQuery({ name: 'country', required: false })
+  @ApiQuery({ name: 'city', required: false })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'pageSize', required: false, example: 50 })
+  list(
+    @Query('status') status?: string,
+    @Query('employerId') employerId?: string,
+    @Query('country') country?: string,
+    @Query('city') city?: string,
+    @Query('page') page?: string,
+    @Query('pageSize') pageSize?: string
+  ) {
+    return this.jobs.adminList({ status, employerId, country, city }, page ? Number(page) : 1, pageSize ? Number(pageSize) : 50);
+  }
+
+  @RequirePermissions('JOB_VIEW')
+  @Get(':id')
+  @ApiOperation({ summary: 'Get job by id (Admin)' })
+  get(@Param('id') id: string) {
+    return this.jobs.adminGet(id);
+  }
+
   @RequirePermissions('JOB_CREATE')
   @Post()
   @ApiOperation({ summary: 'Create job on behalf of employer (MUB Admin/Staff)' })
@@ -52,7 +78,7 @@ export class AdminJobsController {
     @Body() dto: AdminCreateJobForEmployerDto,
     @UploadedFile() thumbnail?: Express.Multer.File
   ) {
-    const thumbnailUrl = thumbnail ? `/uploads/jobs/thumbnails/${thumbnail.filename}` : dto.thumbnailUrl;
+    const thumbnailUrl = thumbnail ? `/uploads/jobs/thumbnails/${thumbnail.filename}` : dto.thumbnailUrl ?? null;
     return this.jobs.adminCreate(user.userId, dto, { thumbnailUrl });
   }
 

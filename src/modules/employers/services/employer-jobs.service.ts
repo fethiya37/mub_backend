@@ -13,6 +13,19 @@ type JobFileOverrides = {
   thumbnailUrl?: string | null;
 };
 
+function normalizeUploadPath(v: string | null | undefined) {
+  if (v === undefined) return undefined;
+  if (v === null) return null;
+
+  const s = String(v).trim();
+  if (!s) return null;
+
+  const idx = s.indexOf('/uploads/');
+  if (idx >= 0) return s.slice(idx);
+
+  return s.startsWith('/uploads/') ? s : s;
+}
+
 @Injectable()
 export class EmployerJobsService {
   constructor(
@@ -32,7 +45,7 @@ export class EmployerJobsService {
     const employer = await this.access.getEmployerForUser(userId);
     this.access.ensureApproved(employer);
 
-    const thumbnailUrl = files?.thumbnailUrl !== undefined ? files.thumbnailUrl : dto.thumbnailUrl ?? null;
+    const thumbnailUrl = normalizeUploadPath(files?.thumbnailUrl !== undefined ? files.thumbnailUrl : dto.thumbnailUrl ?? null);
 
     const job = await this.jobs.create(employer.id, {
       jobTitle: dto.jobTitle,
@@ -70,15 +83,27 @@ export class EmployerJobsService {
     }
 
     const requestedThumb =
-      files?.thumbnailUrl !== undefined ? files.thumbnailUrl : dto.thumbnailUrl === undefined ? undefined : dto.thumbnailUrl;
+      files?.thumbnailUrl !== undefined
+        ? normalizeUploadPath(files.thumbnailUrl)
+        : dto.thumbnailUrl === undefined
+          ? undefined
+          : normalizeUploadPath(dto.thumbnailUrl);
 
-    const nextThumbnailUrl =
-      requestedThumb === undefined ? existing.thumbnailUrl : requestedThumb === null ? null : requestedThumb;
+    const nextThumbnailUrl = requestedThumb === undefined ? existing.thumbnailUrl : requestedThumb;
 
-    const job = await this.jobs.update(jobId, {
-      ...dto,
-      thumbnailUrl: nextThumbnailUrl
-    } as any);
+    const updateData = {
+      ...(dto.jobTitle !== undefined ? { jobTitle: dto.jobTitle } : {}),
+      ...(dto.jobDescription !== undefined ? { jobDescription: dto.jobDescription } : {}),
+      ...(dto.country !== undefined ? { country: dto.country } : {}),
+      ...(dto.city !== undefined ? { city: dto.city ?? null } : {}),
+      ...(dto.salaryRange !== undefined ? { salaryRange: dto.salaryRange ?? null } : {}),
+      ...(dto.vacancies !== undefined ? { vacancies: dto.vacancies } : {}),
+      ...(dto.contractType !== undefined ? { contractType: dto.contractType } : {}),
+      ...(dto.status !== undefined ? { status: dto.status } : {}),
+      ...(requestedThumb !== undefined ? { thumbnailUrl: nextThumbnailUrl } : {})
+    };
+
+    const job = await this.jobs.update(jobId, updateData as any);
 
     if (requestedThumb !== undefined) {
       await this.deleteIfReplaced(existing.thumbnailUrl, nextThumbnailUrl);
@@ -110,7 +135,7 @@ export class EmployerJobsService {
     if (!employer) throw new NotFoundException('Employer not found');
     if (employer.status !== 'APPROVED') throw new BadRequestException('Employer not approved');
 
-    const thumbnailUrl = files?.thumbnailUrl !== undefined ? files.thumbnailUrl : dto.thumbnailUrl ?? null;
+    const thumbnailUrl = normalizeUploadPath(files?.thumbnailUrl !== undefined ? files.thumbnailUrl : dto.thumbnailUrl ?? null);
 
     const job = await this.jobs.create(employer.id, {
       jobTitle: dto.jobTitle,
@@ -153,15 +178,27 @@ export class EmployerJobsService {
     }
 
     const requestedThumb =
-      files?.thumbnailUrl !== undefined ? files.thumbnailUrl : dto.thumbnailUrl === undefined ? undefined : dto.thumbnailUrl;
+      files?.thumbnailUrl !== undefined
+        ? normalizeUploadPath(files.thumbnailUrl)
+        : dto.thumbnailUrl === undefined
+          ? undefined
+          : normalizeUploadPath(dto.thumbnailUrl);
 
-    const nextThumbnailUrl =
-      requestedThumb === undefined ? existing.thumbnailUrl : requestedThumb === null ? null : requestedThumb;
+    const nextThumbnailUrl = requestedThumb === undefined ? existing.thumbnailUrl : requestedThumb;
 
-    const job = await this.jobs.update(dto.jobId, {
-      ...dto,
-      thumbnailUrl: nextThumbnailUrl
-    } as any);
+    const updateData = {
+      ...(dto.jobTitle !== undefined ? { jobTitle: dto.jobTitle } : {}),
+      ...(dto.jobDescription !== undefined ? { jobDescription: dto.jobDescription } : {}),
+      ...(dto.country !== undefined ? { country: dto.country } : {}),
+      ...(dto.city !== undefined ? { city: dto.city ?? null } : {}),
+      ...(dto.salaryRange !== undefined ? { salaryRange: dto.salaryRange ?? null } : {}),
+      ...(dto.vacancies !== undefined ? { vacancies: dto.vacancies } : {}),
+      ...(dto.contractType !== undefined ? { contractType: dto.contractType } : {}),
+      ...(dto.status !== undefined ? { status: dto.status } : {}),
+      ...(requestedThumb !== undefined ? { thumbnailUrl: nextThumbnailUrl } : {})
+    };
+
+    const job = await this.jobs.update(dto.jobId, updateData as any);
 
     if (requestedThumb !== undefined) {
       await this.deleteIfReplaced(existing.thumbnailUrl, nextThumbnailUrl);
@@ -176,5 +213,32 @@ export class EmployerJobsService {
     });
 
     return job;
+  }
+
+  async adminGet(jobId: string) {
+    const job = await this.jobs.findById(jobId);
+    if (!job) throw new NotFoundException('Job not found');
+    return job;
+  }
+
+  async adminList(
+    filters: { status?: string; employerId?: string; country?: string; city?: string },
+    page: number,
+    pageSize: number
+  ) {
+    const skip = (page - 1) * pageSize;
+
+    const where: any = {};
+    if (filters.status) where.status = filters.status.toUpperCase();
+    if (filters.employerId) where.employerId = filters.employerId;
+    if (filters.country) where.country = { contains: filters.country, mode: 'insensitive' };
+    if (filters.city) where.city = { contains: filters.city, mode: 'insensitive' };
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.jobPosting.findMany({ where, orderBy: { updatedAt: 'desc' }, skip, take: pageSize }),
+      this.prisma.jobPosting.count({ where })
+    ]);
+
+    return { items, total };
   }
 }
