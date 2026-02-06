@@ -14,7 +14,10 @@ async function bootstrap() {
     new ValidationPipe({
       whitelist: true,
       forbidNonWhitelisted: true,
-      transform: true
+      transform: true,
+      transformOptions: {
+        enableImplicitConversion: false
+      }
     })
   );
 
@@ -31,10 +34,7 @@ async function bootstrap() {
     .setDescription('MUB Foreign Employment Agent System API')
     .setVersion('1.0.0')
     .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
-    .addApiKey(
-      { type: 'apiKey', name: 'X-Draft-Token', in: 'header', description: 'Raw draft token value' },
-      'draft'
-    )
+    .addApiKey({ type: 'apiKey', name: 'X-Draft-Token', in: 'header', description: 'Raw draft token value' }, 'draft')
     .build();
 
   const document = SwaggerModule.createDocument(app, config);

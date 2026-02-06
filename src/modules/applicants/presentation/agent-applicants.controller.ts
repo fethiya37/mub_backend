@@ -56,7 +56,7 @@ function parseJsonArray<T>(v: any): T[] | undefined {
 @ApiBearerAuth()
 @Controller('api/local-agency/applicants')
 export class AgentApplicantsController {
-  constructor(private readonly applicants: ApplicantsService) {}
+  constructor(private readonly applicants: ApplicantsService) { }
 
   @RequirePermissions('APPLICANT_CREATE')
   @Put()
@@ -86,32 +86,31 @@ export class AgentApplicantsController {
   upsert(
     @CurrentUserDecorator() user: CurrentUser,
     @Body() dto: DraftUpsertApplicantDto,
-    @UploadedFiles()
-    files: Record<string, Express.Multer.File[]>
+    @UploadedFiles() files: Record<string, Express.Multer.File[]>
   ) {
-    const skills = parseJsonArray(dto.skills as any);
-    const qualifications = parseJsonArray(dto.qualifications as any);
-    const workExperiences = parseJsonArray(dto.workExperiences as any);
-    const documents = parseJsonArray(dto.documents as any);
-    const emergencyContacts = parseJsonArray(dto.emergencyContacts as any);
-
-    const resolvedDto: any = {
-      ...dto,
-      skills,
-      qualifications,
-      workExperiences,
-      documents,
-      emergencyContacts
-    };
-
     const fileUrls: Record<string, string> = {};
+
     for (const key of Object.keys(files || {})) {
       const f = files[key]?.[0];
       if (!f) continue;
-      fileUrls[key] = `/uploads/applicants/${key.startsWith('emergencyId_') ? 'emergency-contacts' : key.startsWith('document_') ? 'documents' : key === 'personalPhoto' ? 'photos' : key === 'passportFile' ? 'passport' : key === 'applicantIdFile' ? 'ids' : key === 'cocCertificateFile' ? 'certificates' : 'misc'}/${f.filename}`;
+
+      fileUrls[key] = `/uploads/applicants/${key.startsWith('emergencyId_')
+          ? 'emergency-contacts'
+          : key.startsWith('document_')
+            ? 'documents'
+            : key === 'personalPhoto'
+              ? 'photos'
+              : key === 'passportFile'
+                ? 'passport'
+                : key === 'applicantIdFile'
+                  ? 'ids'
+                  : key === 'cocCertificateFile'
+                    ? 'certificates'
+                    : 'misc'
+        }/${f.filename}`;
     }
 
-    return this.applicants.agentDraftUpsertWithFiles(user.userId, resolvedDto, fileUrls);
+    return this.applicants.agentDraftUpsertWithFiles(user.userId, dto, fileUrls);
   }
 
   @RequirePermissions('APPLICANT_VIEW')

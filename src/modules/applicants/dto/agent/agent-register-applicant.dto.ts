@@ -1,5 +1,4 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { Type } from 'class-transformer';
 import {
   IsArray,
   IsDateString,
@@ -11,6 +10,7 @@ import {
   MinLength,
   ValidateNested
 } from 'class-validator';
+
 import { ApplicantSkillDto } from '../shared/applicant-skill.dto';
 import { ApplicantQualificationDto } from '../shared/applicant-qualification.dto';
 import { ApplicantWorkExperienceDto } from '../shared/applicant-work-experience.dto';
@@ -18,6 +18,7 @@ import { ApplicantDocumentDto } from '../shared/applicant-document.dto';
 import { ApplicantEmergencyContactDto } from '../shared/applicant-emergency-contact.dto';
 import { Genders } from '../shared/enums.dto';
 import type { Gender } from '../shared/enums.dto';
+import { JsonArrayOf, ToNumber } from '../shared/transforms';
 
 export class AgentRegisterApplicantDto {
   @ApiProperty({ example: '+251911111111' })
@@ -82,16 +83,19 @@ export class AgentRegisterApplicantDto {
 
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
+  @ToNumber()
   @IsNumber()
   numberOfChildren?: number;
 
   @ApiPropertyOptional({ example: 170 })
   @IsOptional()
+  @ToNumber()
   @IsNumber()
   height?: number;
 
   @ApiPropertyOptional({ example: 60 })
   @IsOptional()
+  @ToNumber()
   @IsNumber()
   weight?: number;
 
@@ -141,61 +145,38 @@ export class AgentRegisterApplicantDto {
   @IsOptional()
   cocCertificateFile?: any;
 
-  @ApiPropertyOptional({
-    type: [ApplicantEmergencyContactDto],
-    example: [
-      {
-        fullName: 'Ahmed Seid',
-        phone: '+251922222222',
-        relationship: 'Brother',
-        address: 'Addis Ababa, Ethiopia',
-        idFileUrl: '/uploads/applicants/emergency-contacts/id.pdf'
-      }
-    ]
-  })
+  @ApiPropertyOptional({ type: [ApplicantEmergencyContactDto] })
   @IsOptional()
+  @JsonArrayOf(ApplicantEmergencyContactDto)
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ApplicantEmergencyContactDto)
   emergencyContacts?: ApplicantEmergencyContactDto[];
 
-  @ApiPropertyOptional({
-    type: [ApplicantSkillDto],
-    example: [{ skillId: 'uuid-skill-id', hasSkill: true, willingToLearn: false }]
-  })
+  @ApiPropertyOptional({ type: [ApplicantSkillDto] })
   @IsOptional()
+  @JsonArrayOf(ApplicantSkillDto)
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ApplicantSkillDto)
   skills?: ApplicantSkillDto[];
 
-  @ApiPropertyOptional({
-    type: [ApplicantQualificationDto],
-    example: [{ qualification: 'COC Level III' }]
-  })
+  @ApiPropertyOptional({ type: [ApplicantQualificationDto] })
   @IsOptional()
+  @JsonArrayOf(ApplicantQualificationDto)
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ApplicantQualificationDto)
   qualifications?: ApplicantQualificationDto[];
 
-  @ApiPropertyOptional({
-    type: [ApplicantWorkExperienceDto],
-    example: [{ jobTitle: 'Electrician', country: 'UAE', yearsWorked: 3 }]
-  })
+  @ApiPropertyOptional({ type: [ApplicantWorkExperienceDto] })
   @IsOptional()
+  @JsonArrayOf(ApplicantWorkExperienceDto)
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ApplicantWorkExperienceDto)
   workExperiences?: ApplicantWorkExperienceDto[];
 
-  @ApiPropertyOptional({
-    type: [ApplicantDocumentDto],
-    example: [{ documentType: 'PASSPORT', fileUrl: '/uploads/applicants/uuid/passport.pdf', status: 'PENDING' }]
-  })
+  @ApiPropertyOptional({ type: [ApplicantDocumentDto] })
   @IsOptional()
+  @JsonArrayOf(ApplicantDocumentDto)
   @IsArray()
   @ValidateNested({ each: true })
-  @Type(() => ApplicantDocumentDto)
   documents?: ApplicantDocumentDto[];
 }

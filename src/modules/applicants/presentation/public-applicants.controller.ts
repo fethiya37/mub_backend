@@ -1,15 +1,16 @@
 import { Body, Controller, Get, Post, Put, Req, UploadedFiles, UseGuards, UseInterceptors } from '@nestjs/common';
 import { ApiConsumes, ApiOperation, ApiResponse, ApiSecurity, ApiTags } from '@nestjs/swagger';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import crypto from 'crypto';
+import { join } from 'path';
+
 import { Public } from '../../../common/decorators/public.decorator';
 import { DraftUpsertApplicantDto } from '../dto/public/draft-upsert-applicant.dto';
 import { SubmitApplicantDto } from '../dto/public/submit-applicant.dto';
 import { IssueDraftTokenDto } from '../dto/public/issue-draft-token.dto';
 import { ApplicantsService } from '../services/applicants.service';
 import { DraftTokenGuard } from '../guards/draft-token.guard';
-import { FileFieldsInterceptor } from '@nestjs/platform-express';
-import { diskStorage } from 'multer';
-import crypto from 'crypto';
-import { join } from 'path';
 import { buildUploadsRoot, ensureDir, maxUploadBytes, safeExt } from '../../../common/utils/upload/upload.utils';
 
 function applicantDiskStorage() {
@@ -42,13 +43,6 @@ function applicantDiskStorage() {
       cb(null, `${name}${ext}`);
     }
   });
-}
-
-function parseJsonArray<T>(v: any): T[] | undefined {
-  if (v === undefined || v === null || v === '') return undefined;
-  if (Array.isArray(v)) return v as any;
-  if (typeof v === 'string') return JSON.parse(v) as T[];
-  return undefined;
 }
 
 @ApiTags('Public Applicants')
@@ -92,36 +86,44 @@ export class PublicApplicantsController {
     }
   })
   draftUpsert(@Body() dto: DraftUpsertApplicantDto, @UploadedFiles() files: Record<string, Express.Multer.File[]>) {
-    const skills = parseJsonArray(dto.skills as any);
-    const qualifications = parseJsonArray(dto.qualifications as any);
-    const workExperiences = parseJsonArray(dto.workExperiences as any);
-    const documents = parseJsonArray(dto.documents as any);
-    const emergencyContacts = parseJsonArray(dto.emergencyContacts as any);
-
-    const resolvedDto: any = {
-      ...dto,
-      skills,
-      qualifications,
-      workExperiences,
-      documents,
-      emergencyContacts
-    };
-
     const fileUrls: Record<string, string> = {};
+
     for (const key of Object.keys(files || {})) {
       const f = files[key]?.[0];
       if (!f) continue;
-      fileUrls[key] = `/uploads/applicants/${key.startsWith('emergencyId_') ? 'emergency-contacts' : key.startsWith('document_') ? 'documents' : key === 'personalPhoto' ? 'photos' : key === 'passportFile' ? 'passport' : key === 'applicantIdFile' ? 'ids' : key === 'cocCertificateFile' ? 'certificates' : 'misc'}/${f.filename}`;
+
+      const dir =
+        key.startsWith('emergencyId_')
+          ? 'emergency-contacts'
+          : key.startsWith('document_')
+            ? 'documents'
+            : key === 'personalPhoto'
+              ? 'photos'
+              : key === 'passportFile'
+                ? 'passport'
+                : key === 'applicantIdFile'
+                  ? 'ids'
+                  : key === 'cocCertificateFile'
+                    ? 'certificates'
+                    : 'misc';
+
+      fileUrls[key] = `/uploads/applicants/${dir}/${f.filename}`;
     }
 
-    return this.applicants.draftUpsertWithFiles(resolvedDto, fileUrls);
+    return this.applicants.draftUpsertWithFiles(dto, fileUrls);
   }
 
   @Post('draft-token')
   @ApiOperation({ summary: 'Re-issue Draft token for DRAFT/REJECTED (optional passportNumber match)' })
   @ApiResponse({
     status: 200,
-    schema: { example: { applicantId: 'uuid-applicant-id', draftToken: 'base64url-token', draftTokenExpiresAt: '2026-01-23T10:00:00.000Z' } }
+    schema: {
+      example: {
+        applicantId: 'uuid-applicant-id',
+        draftToken: 'base64url-token',
+        draftTokenExpiresAt: '2026-01-23T10:00:00.000Z'
+      }
+    }
   })
   issueDraftToken(@Body() dto: IssueDraftTokenDto) {
     return this.applicants.issueDraftToken(dto.phone, dto.passportNumber);
@@ -162,34 +164,32 @@ export class PublicApplicantsController {
   )
   @ApiOperation({ summary: 'Update draft using Draft token and rotate token (supports multipart files)' })
   @ApiResponse({ status: 200, schema: { example: { ok: true, draftToken: 'base64url-token', draftTokenExpiresAt: '2026-01-23T10:00:00.000Z' } } })
-  updateDraft(
-    @Req() req: any,
-    @Body() dto: DraftUpsertApplicantDto,
-    @UploadedFiles() files: Record<string, Express.Multer.File[]>
-  ) {
-    const skills = parseJsonArray(dto.skills as any);
-    const qualifications = parseJsonArray(dto.qualifications as any);
-    const workExperiences = parseJsonArray(dto.workExperiences as any);
-    const documents = parseJsonArray(dto.documents as any);
-    const emergencyContacts = parseJsonArray(dto.emergencyContacts as any);
-
-    const resolvedDto: any = {
-      ...dto,
-      skills,
-      qualifications,
-      workExperiences,
-      documents,
-      emergencyContacts
-    };
-
+  updateDraft(@Req() req: any, @Body() dto: DraftUpsertApplicantDto, @UploadedFiles() files: Record<string, Express.Multer.File[]>) {
     const fileUrls: Record<string, string> = {};
+
     for (const key of Object.keys(files || {})) {
       const f = files[key]?.[0];
       if (!f) continue;
-      fileUrls[key] = `/uploads/applicants/${key.startsWith('emergencyId_') ? 'emergency-contacts' : key.startsWith('document_') ? 'documents' : key === 'personalPhoto' ? 'photos' : key === 'passportFile' ? 'passport' : key === 'applicantIdFile' ? 'ids' : key === 'cocCertificateFile' ? 'certificates' : 'misc'}/${f.filename}`;
+
+      const dir =
+        key.startsWith('emergencyId_')
+          ? 'emergency-contacts'
+          : key.startsWith('document_')
+            ? 'documents'
+            : key === 'personalPhoto'
+              ? 'photos'
+              : key === 'passportFile'
+                ? 'passport'
+                : key === 'applicantIdFile'
+                  ? 'ids'
+                  : key === 'cocCertificateFile'
+                    ? 'certificates'
+                    : 'misc';
+
+      fileUrls[key] = `/uploads/applicants/${dir}/${f.filename}`;
     }
 
-    return this.applicants.draftUpdateWithFiles(req.applicantId, resolvedDto, fileUrls);
+    return this.applicants.draftUpdateWithFiles(req.applicantId, dto, fileUrls);
   }
 
   @UseGuards(DraftTokenGuard)

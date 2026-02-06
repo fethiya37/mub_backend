@@ -1,5 +1,6 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
 import { IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
+import { ToInt } from './transforms';
 
 export class ApplicantWorkExperienceDto {
   @ApiProperty({ example: 'Construction Electrician' })
@@ -14,6 +15,7 @@ export class ApplicantWorkExperienceDto {
 
   @ApiPropertyOptional({ example: 2 })
   @IsOptional()
+  @ToInt()
   @IsInt()
   @Min(0)
   yearsWorked?: number;
