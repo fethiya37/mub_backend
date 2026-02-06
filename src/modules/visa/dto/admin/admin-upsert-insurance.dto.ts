@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUrl, MinLength } from 'class-validator';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class AdminUpsertInsuranceDto {
   @ApiProperty()
@@ -17,9 +17,12 @@ export class AdminUpsertInsuranceDto {
   @IsString()
   policyNumber?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  policyFile?: any;
+
+  @ApiPropertyOptional({ example: '/uploads/visa/insurance/policy.pdf', nullable: true })
   @IsOptional()
   @IsString()
-  @IsUrl()
-  policyFileUrl?: string;
+  policyFileUrl?: string | null;
 }

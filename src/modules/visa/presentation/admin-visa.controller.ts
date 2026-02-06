@@ -1,5 +1,10 @@
-import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
-import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { FileFieldsInterceptor } from '@nestjs/platform-express';
+import { diskStorage } from 'multer';
+import crypto from 'crypto';
+import { join } from 'path';
+
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { CurrentUserDecorator } from '../../../common/decorators/current-user.decorator';
 import type { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -17,6 +22,32 @@ import { AdminCreateVisaAttemptDto } from '../dto/admin/admin-create-visa-attemp
 import { AdminCreateFlightBookingDto } from '../dto/admin/admin-create-flight-booking.dto';
 import { AdminCreateVisaReturnDto } from '../dto/admin/admin-create-visa-return.dto';
 import { AdminCloseVisaCaseDto } from '../dto/admin/admin-close-visa-case.dto';
+
+import { buildUploadsRoot, ensureDir, maxUploadBytes, safeExt } from '../../../common/utils/upload/upload.utils';
+
+function visaDiskStorage() {
+  return diskStorage({
+    destination: (_req, file, cb) => {
+      const root = buildUploadsRoot();
+
+      const subdir =
+        file.fieldname === 'reportFile'
+          ? join('visa', 'medical')
+          : file.fieldname === 'policyFile'
+            ? join('visa', 'insurance')
+            : join('visa', 'misc');
+
+      const dest = join(root, subdir);
+      ensureDir(dest);
+      cb(null, dest);
+    },
+    filename: (_req, file, cb) => {
+      const ext = safeExt(file.originalname);
+      const name = crypto.randomBytes(16).toString('hex');
+      cb(null, `${name}${ext}`);
+    }
+  });
+}
 
 @ApiTags('Admin Visa')
 @ApiBearerAuth()
@@ -41,22 +72,62 @@ export class AdminVisaController {
   @RequirePermissions('VISA_UPDATE')
   @Put('cases/:id/assign-manager')
   @ApiOperation({ summary: 'Assign case manager' })
-  assignManager(@CurrentUserDecorator() user: CurrentUser, @Param('id') id: string, @Body() dto: AdminAssignCaseManagerDto) {
+  assignManager(
+    @CurrentUserDecorator() user: CurrentUser,
+    @Param('id') id: string,
+    @Body() dto: AdminAssignCaseManagerDto
+  ) {
     return this.visas.adminAssignCaseManager(user.userId, id, dto);
   }
 
   @RequirePermissions('MEDICAL_UPLOAD_RESULT')
   @Post('medical')
   @ApiOperation({ summary: 'Upsert medical and set case status to MEDICAL' })
-  upsertMedical(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpsertMedicalDto) {
-    return this.visas.adminUpsertMedical(user.userId, dto);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileFieldsInterceptor([{ name: 'reportFile', maxCount: 1 }], {
+      limits: { fileSize: maxUploadBytes() },
+      storage: visaDiskStorage()
+    })
+  )
+  upsertMedical(
+    @CurrentUserDecorator() user: CurrentUser,
+    @Body() dto: AdminUpsertMedicalDto,
+    @UploadedFiles() files: { reportFile?: Express.Multer.File[] }
+  ) {
+    const reportFileUrl = files?.reportFile?.[0]
+      ? `/uploads/visa/medical/${files.reportFile[0].filename}`
+      : dto.reportFileUrl;
+
+    return this.visas.adminUpsertMedical(user.userId, {
+      ...dto,
+      reportFileUrl: reportFileUrl ?? null
+    });
   }
 
   @RequirePermissions('VISA_UPDATE')
   @Post('insurance')
   @ApiOperation({ summary: 'Upsert insurance and set case status to INSURANCE' })
-  upsertInsurance(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminUpsertInsuranceDto) {
-    return this.visas.adminUpsertInsurance(user.userId, dto);
+  @ApiConsumes('multipart/form-data')
+  @UseInterceptors(
+    FileFieldsInterceptor([{ name: 'policyFile', maxCount: 1 }], {
+      limits: { fileSize: maxUploadBytes() },
+      storage: visaDiskStorage()
+    })
+  )
+  upsertInsurance(
+    @CurrentUserDecorator() user: CurrentUser,
+    @Body() dto: AdminUpsertInsuranceDto,
+    @UploadedFiles() files: { policyFile?: Express.Multer.File[] }
+  ) {
+    const policyFileUrl = files?.policyFile?.[0]
+      ? `/uploads/visa/insurance/${files.policyFile[0].filename}`
+      : dto.policyFileUrl;
+
+    return this.visas.adminUpsertInsurance(user.userId, {
+      ...dto,
+      policyFileUrl: policyFileUrl ?? null
+    });
   }
 
   @RequirePermissions('VISA_UPDATE')

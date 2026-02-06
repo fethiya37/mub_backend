@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsString, IsUrl, MinLength } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsOptional, IsString, MinLength } from 'class-validator';
 
 export class AdminCreateApplicationDto {
   @ApiProperty()
@@ -12,8 +12,12 @@ export class AdminCreateApplicationDto {
   @MinLength(5)
   jobPostingId!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  cv?: any;
+
+  @ApiPropertyOptional({ example: '/uploads/job-applications/cv/cv.pdf', nullable: true })
+  @IsOptional()
   @IsString()
-  @IsUrl()
-  cvFileUrl!: string;
+  cvFileUrl?: string | null;
 }

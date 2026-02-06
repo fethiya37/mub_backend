@@ -46,7 +46,7 @@ export class VisasService {
     private readonly access: VisaAccessService,
     private readonly status: VisaStatusService,
     private readonly attemptNumbers: VisaAttemptNumberService
-  ) {}
+  ) { }
 
   private page(v?: number) {
     return v && v > 0 ? v : 1;
@@ -105,6 +105,8 @@ export class VisasService {
     const c = await this.getCaseOrThrow(dto.visaCaseId);
     this.status.ensureCaseActive(c.isActive);
 
+    if (!dto.reportFileUrl) throw new BadRequestException('reportFileUrl is required');
+
     const medical = await this.medical.upsert({
       visaCaseId: dto.visaCaseId,
       reportFileUrl: dto.reportFileUrl,
@@ -132,6 +134,7 @@ export class VisasService {
 
     return insurance;
   }
+
 
   async adminSetFingerprint(adminUserId: string, visaCaseId: string, dto: AdminSetFingerprintDto) {
     const c = await this.getCaseOrThrow(visaCaseId);

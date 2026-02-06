@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsOptional, IsString, IsUrl, MinLength } from 'class-validator';
+import { IsIn, IsOptional, IsString, MinLength } from 'class-validator';
 import { MedicalFitnessResults } from '../shared/enums.dto';
 
 export class AdminUpsertMedicalDto {
@@ -8,10 +8,14 @@ export class AdminUpsertMedicalDto {
   @MinLength(5)
   visaCaseId!: string;
 
-  @ApiProperty()
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  reportFile?: any;
+
+  @ApiPropertyOptional({ example: '/uploads/visa/medical/report.pdf', nullable: true })
+  @IsOptional()
   @IsString()
-  @IsUrl()
-  reportFileUrl!: string;
+  reportFileUrl?: string | null;
 
   @ApiProperty({ enum: MedicalFitnessResults, example: 'FIT' })
   @IsIn(MedicalFitnessResults)

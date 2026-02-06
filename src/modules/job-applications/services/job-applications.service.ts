@@ -18,6 +18,8 @@ import type { AdminUpdateCvDto } from '../dto/admin/admin-update-cv.dto';
 import type { EmployerListApplicationsQueryDto } from '../dto/employer/employer-list-applications.query.dto';
 import type { EmployerDecideApplicationDto } from '../dto/employer/employer-decide-application.dto';
 
+import { safeDeleteUploadByRelativePath } from '../../../common/utils/upload/upload.utils';
+
 @Injectable()
 export class JobApplicationsService {
   constructor(
@@ -33,6 +35,11 @@ export class JobApplicationsService {
   private pageSize(v?: number, def = 20) {
     const n = v && v > 0 ? v : def;
     return n > 200 ? 200 : n;
+  }
+
+  private requireCvFileUrl(v: string | null | undefined) {
+    if (!v) throw new BadRequestException('cvFileUrl is required');
+    return v;
   }
 
   private async getApplicantIdByUserId(userId: string) {
@@ -73,7 +80,7 @@ export class JobApplicationsService {
     return this.repo.applyOrReapply({
       applicantId,
       jobPostingId: dto.jobPostingId,
-      cvFileUrl: dto.cvFileUrl
+      cvFileUrl: this.requireCvFileUrl(dto.cvFileUrl)
     });
   }
 
@@ -86,7 +93,14 @@ export class JobApplicationsService {
 
     this.status.ensureCvEditable(app.status);
 
-    return this.repo.updateCv(applicationId, dto.cvFileUrl);
+    const nextCv = this.requireCvFileUrl(dto.cvFileUrl);
+    const updated = await this.repo.updateCv(applicationId, nextCv);
+
+    if (app.cvFileUrl && app.cvFileUrl !== nextCv) {
+      await safeDeleteUploadByRelativePath(app.cvFileUrl);
+    }
+
+    return updated;
   }
 
   async withdrawAsApplicant(userId: string, applicationId: string, dto: WithdrawApplicationDto) {
@@ -133,7 +147,7 @@ export class JobApplicationsService {
     return this.repo.applyOrReapply({
       applicantId: dto.applicantId,
       jobPostingId: dto.jobPostingId,
-      cvFileUrl: dto.cvFileUrl
+      cvFileUrl: this.requireCvFileUrl(dto.cvFileUrl)
     });
   }
 
@@ -151,7 +165,14 @@ export class JobApplicationsService {
 
     this.status.ensureCvEditable(app.status);
 
-    return this.repo.updateCv(applicationId, dto.cvFileUrl);
+    const nextCv = this.requireCvFileUrl(dto.cvFileUrl);
+    const updated = await this.repo.updateCv(applicationId, nextCv);
+
+    if (app.cvFileUrl && app.cvFileUrl !== nextCv) {
+      await safeDeleteUploadByRelativePath(app.cvFileUrl);
+    }
+
+    return updated;
   }
 
   async approveAsAdmin(adminUserId: string, applicationId: string, dto: AdminApproveApplicationDto) {
