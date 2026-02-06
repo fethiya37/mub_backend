@@ -1,4 +1,4 @@
-import { ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
 import { EmployerRepository } from '../repositories/employer.repository';
 import { AuditService } from '../../audit/services/audit.service';
 import { EmployerRegistrationNumberService } from './employer-registration-number.service';
@@ -94,6 +94,11 @@ export class EmployersService {
     return next;
   }
 
+  private requireLicenseFileUrl(v: string | null | undefined) {
+    if (!v) throw new BadRequestException('licenseFileUrl is required');
+    return v;
+  }
+
   async register(dto: EmployerRegisterDto) {
     await this.ensureUnique(dto);
 
@@ -114,7 +119,7 @@ export class EmployersService {
       ownerIdFileUrl: dto.ownerIdFileUrl ?? null,
 
       licenseNumber: dto.licenseNumber,
-      licenseFileUrl: dto.licenseFileUrl,
+      licenseFileUrl: this.requireLicenseFileUrl(dto.licenseFileUrl),
       licenseExpiry,
 
       createdBy: 'EMPLOYER'
@@ -150,7 +155,7 @@ export class EmployersService {
       ownerIdFileUrl: dto.ownerIdFileUrl ?? null,
 
       licenseNumber: dto.licenseNumber,
-      licenseFileUrl: dto.licenseFileUrl,
+      licenseFileUrl: this.requireLicenseFileUrl(dto.licenseFileUrl),
       licenseExpiry,
 
       createdBy: 'ADMIN'

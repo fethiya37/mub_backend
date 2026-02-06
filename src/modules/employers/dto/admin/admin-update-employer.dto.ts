@@ -31,6 +31,10 @@ export class AdminUpdateEmployerDto {
   @IsString()
   address?: string;
 
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  logo?: any;
+
   @ApiPropertyOptional({ example: '/uploads/employers/logos/logo.png', nullable: true })
   @IsOptional()
   @IsString()
@@ -48,6 +52,10 @@ export class AdminUpdateEmployerDto {
   @MinLength(3)
   ownerIdNumber?: string | null;
 
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  ownerIdFile?: any;
+
   @ApiPropertyOptional({ example: '/uploads/employers/owners/owner-id.pdf', nullable: true })
   @IsOptional()
   @IsString()
@@ -59,11 +67,15 @@ export class AdminUpdateEmployerDto {
   @MinLength(3)
   licenseNumber?: string;
 
-  @ApiPropertyOptional({ example: '/uploads/employers/licenses/lic-2025-000123.pdf' })
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  licenseFile?: any;
+
+  @ApiPropertyOptional({ example: '/uploads/employers/licenses/lic-2025-000123.pdf', nullable: true })
   @IsOptional()
   @IsString()
   @MinLength(2)
-  licenseFileUrl?: string;
+  licenseFileUrl?: string | null;
 
   @ApiPropertyOptional({ example: '2030-12-31', nullable: true })
   @IsOptional()

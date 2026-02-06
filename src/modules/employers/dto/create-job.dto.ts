@@ -32,10 +32,14 @@ export class CreateJobDto {
   @IsString()
   salaryRange?: string;
 
-  @ApiPropertyOptional({ example: '/uploads/jobs/thumbs/job-thumb.png' })
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  thumbnail?: any;
+
+  @ApiPropertyOptional({ example: '/uploads/jobs/thumbnails/job-thumb.png', nullable: true })
   @IsOptional()
   @IsString()
-  thumbnailUrl?: string;
+  thumbnailUrl?: string | null;
 
   @ApiProperty({ example: 2 })
   @IsInt()

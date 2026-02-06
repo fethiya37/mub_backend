@@ -26,39 +26,52 @@ export class EmployerRegisterDto {
   @IsString()
   address?: string;
 
-  @ApiPropertyOptional({ example: '/uploads/employers/logos/logo.png' })
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  logo?: any;
+
+  @ApiPropertyOptional({ example: '/uploads/employers/logos/logo.png', nullable: true })
   @IsOptional()
   @IsString()
-  logoUrl?: string;
+  logoUrl?: string | null;
 
   @ApiProperty({ example: 'Ahmed Al Noor' })
   @IsString()
   @MinLength(2)
   ownerName!: string;
 
-  @ApiPropertyOptional({ example: '784-1988-1234567-1' })
+  @ApiPropertyOptional({ example: '784-1988-1234567-1', nullable: true })
   @IsOptional()
   @IsString()
   @MinLength(3)
-  ownerIdNumber?: string;
+  ownerIdNumber?: string | null;
 
-  @ApiPropertyOptional({ example: '/uploads/employers/owners/owner-id.pdf' })
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  ownerIdFile?: any;
+
+  @ApiPropertyOptional({ example: '/uploads/employers/owners/owner-id.pdf', nullable: true })
   @IsOptional()
   @IsString()
-  ownerIdFileUrl?: string;
+  ownerIdFileUrl?: string | null;
 
   @ApiProperty({ example: 'LIC-2025-000123' })
   @IsString()
   @MinLength(3)
   licenseNumber!: string;
 
-  @ApiProperty({ example: '/uploads/employers/licenses/lic-2025-000123.pdf' })
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  licenseFile?: any;
+
+  @ApiPropertyOptional({ example: '/uploads/employers/licenses/lic-2025-000123.pdf', nullable: true })
+  @IsOptional()
   @IsString()
   @MinLength(2)
-  licenseFileUrl!: string;
+  licenseFileUrl?: string | null;
 
-  @ApiPropertyOptional({ example: '2030-12-31' })
+  @ApiPropertyOptional({ example: '2030-12-31', nullable: true })
   @IsOptional()
   @IsDateString()
-  licenseExpiry?: string;
+  licenseExpiry?: string | null;
 }
