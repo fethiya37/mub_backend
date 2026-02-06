@@ -9,7 +9,7 @@ import {
   IsOptional,
   IsString,
   MinLength,
-  ValidateNested,
+  ValidateNested
 } from 'class-validator';
 import { ApplicantSkillDto } from '../shared/applicant-skill.dto';
 import { ApplicantQualificationDto } from '../shared/applicant-qualification.dto';
@@ -80,7 +80,6 @@ export class AgentRegisterApplicantDto {
   @IsString()
   occupation?: string;
 
-
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
   @IsNumber()
@@ -126,6 +125,22 @@ export class AgentRegisterApplicantDto {
   @IsDateString()
   passportExpiry?: string;
 
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  personalPhoto?: any;
+
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  passportFile?: any;
+
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  applicantIdFile?: any;
+
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  cocCertificateFile?: any;
+
   @ApiPropertyOptional({
     type: [ApplicantEmergencyContactDto],
     example: [
@@ -134,9 +149,9 @@ export class AgentRegisterApplicantDto {
         phone: '+251922222222',
         relationship: 'Brother',
         address: 'Addis Ababa, Ethiopia',
-        idFileUrl: 'https://files.example.com/emergency-contact-id.pdf'
-      },
-    ],
+        idFileUrl: '/uploads/applicants/emergency-contacts/id.pdf'
+      }
+    ]
   })
   @IsOptional()
   @IsArray()
@@ -146,7 +161,7 @@ export class AgentRegisterApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantSkillDto],
-    example: [{ skillId: 'uuid-skill-id', hasSkill: true, willingToLearn: false }],
+    example: [{ skillId: 'uuid-skill-id', hasSkill: true, willingToLearn: false }]
   })
   @IsOptional()
   @IsArray()
@@ -156,7 +171,7 @@ export class AgentRegisterApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantQualificationDto],
-    example: [{ qualification: 'COC Level III' }],
+    example: [{ qualification: 'COC Level III' }]
   })
   @IsOptional()
   @IsArray()
@@ -166,7 +181,7 @@ export class AgentRegisterApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantWorkExperienceDto],
-    example: [{ jobTitle: 'Electrician', country: 'UAE', yearsWorked: 3 }],
+    example: [{ jobTitle: 'Electrician', country: 'UAE', yearsWorked: 3 }]
   })
   @IsOptional()
   @IsArray()
@@ -176,7 +191,7 @@ export class AgentRegisterApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantDocumentDto],
-    example: [{ documentType: 'PASSPORT', fileUrl: 'https://files.example.com/applicants/uuid/passport.pdf', status: 'PENDING' }],
+    example: [{ documentType: 'PASSPORT', fileUrl: '/uploads/applicants/uuid/passport.pdf', status: 'PENDING' }]
   })
   @IsOptional()
   @IsArray()

@@ -8,7 +8,11 @@ export class ApplicantDocumentDto {
   @IsIn(ApplicantDocumentTypes)
   documentType!: ApplicantDocumentType;
 
-  @ApiProperty({ example: 'https://files.example.com/applicants/uuid/passport.pdf' })
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  file?: any;
+
+  @ApiProperty({ example: '/uploads/applicants/uuid/passport.pdf' })
   @IsString()
   fileUrl!: string;
 

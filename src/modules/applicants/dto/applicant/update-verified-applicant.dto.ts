@@ -27,6 +27,21 @@ export class UpdateVerifiedApplicantDto {
   @IsString()
   occupation?: string;
 
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  personalPhoto?: any;
+
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  passportFile?: any;
+
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  applicantIdFile?: any;
+
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  cocCertificateFile?: any;
 
   @ApiPropertyOptional({
     type: [ApplicantSkillDto],
@@ -60,7 +75,7 @@ export class UpdateVerifiedApplicantDto {
 
   @ApiPropertyOptional({
     type: [ApplicantDocumentDto],
-    example: [{ documentType: 'OTHER', fileUrl: 'https://files.example.com/applicants/uuid/extra.pdf', status: 'PENDING' }]
+    example: [{ documentType: 'OTHER', fileUrl: '/uploads/applicants/uuid/extra.pdf', status: 'PENDING' }]
   })
   @IsOptional()
   @IsArray()

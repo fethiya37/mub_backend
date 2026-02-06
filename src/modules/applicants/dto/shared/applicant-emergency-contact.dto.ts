@@ -21,8 +21,12 @@ export class ApplicantEmergencyContactDto {
   @IsString()
   address?: string;
 
-  @ApiPropertyOptional({ example: 'https://files.example.com/emergency-contact-id.pdf' })
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  idFile?: any;
+
+  @ApiPropertyOptional({ example: '/uploads/applicants/emergency-contacts/id.pdf', nullable: true })
   @IsOptional()
   @IsString()
-  idFileUrl?: string;
+  idFileUrl?: string | null;
 }
