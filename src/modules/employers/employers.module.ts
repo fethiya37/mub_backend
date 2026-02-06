@@ -21,6 +21,7 @@ import { JobPostingPrismaRepository } from './prisma/job-posting.prisma-reposito
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { RbacModule } from '../rbac/rbac.module';
+import { AdminJobsController } from './presentation/admin-jobs.controller';
 
 @Module({
   imports: [AuditModule, AuthModule, RbacModule],
@@ -29,7 +30,8 @@ import { RbacModule } from '../rbac/rbac.module';
     AdminEmployersController,
     EmployerJobsController,
     PublicJobsController,
-    EmployerProfileController
+    EmployerProfileController,
+    AdminJobsController
   ],
   providers: [
     PrismaService,

@@ -31,7 +31,7 @@ export class AdminUpdateEmployerDto {
   @IsString()
   address?: string;
 
-  @ApiPropertyOptional({ example: 'https://files.example.com/employers/logo.png', nullable: true })
+  @ApiPropertyOptional({ example: '/uploads/employers/logos/logo.png', nullable: true })
   @IsOptional()
   @IsString()
   logoUrl?: string | null;
@@ -48,7 +48,7 @@ export class AdminUpdateEmployerDto {
   @MinLength(3)
   ownerIdNumber?: string | null;
 
-  @ApiPropertyOptional({ example: 'https://files.example.com/owners/owner-id.pdf', nullable: true })
+  @ApiPropertyOptional({ example: '/uploads/employers/owners/owner-id.pdf', nullable: true })
   @IsOptional()
   @IsString()
   ownerIdFileUrl?: string | null;
@@ -59,7 +59,7 @@ export class AdminUpdateEmployerDto {
   @MinLength(3)
   licenseNumber?: string;
 
-  @ApiPropertyOptional({ example: 'https://files.example.com/licenses/lic-2025-000123.pdf' })
+  @ApiPropertyOptional({ example: '/uploads/employers/licenses/lic-2025-000123.pdf' })
   @IsOptional()
   @IsString()
   @MinLength(2)

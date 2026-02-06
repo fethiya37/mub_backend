@@ -26,7 +26,7 @@ export class EmployerRegisterDto {
   @IsString()
   address?: string;
 
-  @ApiPropertyOptional({ example: 'https://files.example.com/employers/logo.png' })
+  @ApiPropertyOptional({ example: '/uploads/employers/logos/logo.png' })
   @IsOptional()
   @IsString()
   logoUrl?: string;
@@ -42,7 +42,7 @@ export class EmployerRegisterDto {
   @MinLength(3)
   ownerIdNumber?: string;
 
-  @ApiPropertyOptional({ example: 'https://files.example.com/owners/owner-id.pdf' })
+  @ApiPropertyOptional({ example: '/uploads/employers/owners/owner-id.pdf' })
   @IsOptional()
   @IsString()
   ownerIdFileUrl?: string;
@@ -52,7 +52,7 @@ export class EmployerRegisterDto {
   @MinLength(3)
   licenseNumber!: string;
 
-  @ApiProperty({ example: 'https://files.example.com/licenses/lic-2025-000123.pdf' })
+  @ApiProperty({ example: '/uploads/employers/licenses/lic-2025-000123.pdf' })
   @IsString()
   @MinLength(2)
   licenseFileUrl!: string;

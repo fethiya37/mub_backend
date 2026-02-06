@@ -7,6 +7,7 @@ import type { EmployerRegisterDto } from '../dto/employer-register.dto';
 import type { AdminCreateEmployerDto } from '../dto/admin/admin-create-employer.dto';
 import type { AdminUpdateEmployerDto } from '../dto/admin/admin-update-employer.dto';
 import type { EmployerSelfUpdateDto } from '../dto/employer/employer-self-update.dto';
+import { safeDeleteUploadByRelativePath } from '../../../common/utils/upload/upload.utils';
 
 @Injectable()
 export class EmployersService {
@@ -16,6 +17,82 @@ export class EmployersService {
     private readonly regNo: EmployerRegistrationNumberService,
     private readonly validation: EmployerValidationService
   ) {}
+
+  async resolveEmployerRegisterFiles(
+    dto: EmployerRegisterDto,
+    files: {
+      logoFile?: Express.Multer.File;
+      ownerIdFile?: Express.Multer.File;
+      licenseFile?: Express.Multer.File;
+    }
+  ): Promise<EmployerRegisterDto> {
+    const next: EmployerRegisterDto = { ...dto };
+
+    if (files.logoFile) next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
+    if (files.ownerIdFile) next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
+    if (files.licenseFile) next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
+
+    return next;
+  }
+
+  async resolveAdminCreateFiles(
+    dto: AdminCreateEmployerDto,
+    files: {
+      logoFile?: Express.Multer.File;
+      ownerIdFile?: Express.Multer.File;
+      licenseFile?: Express.Multer.File;
+    }
+  ): Promise<AdminCreateEmployerDto> {
+    const next: AdminCreateEmployerDto = { ...dto };
+
+    if (files.logoFile) next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
+    if (files.ownerIdFile) next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
+    if (files.licenseFile) next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
+
+    return next;
+  }
+
+  async resolveAdminUpdateFiles(
+    employerId: string,
+    dto: AdminUpdateEmployerDto,
+    files: {
+      logoFile?: Express.Multer.File;
+      ownerIdFile?: Express.Multer.File;
+      licenseFile?: Express.Multer.File;
+    }
+  ): Promise<AdminUpdateEmployerDto> {
+    const existing = await this.employers.findById(employerId);
+    if (!existing) throw new NotFoundException('Employer not found');
+
+    const next: AdminUpdateEmployerDto = { ...dto };
+
+    if (files.logoFile) next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
+    if (files.ownerIdFile) next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
+    if (files.licenseFile) next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
+
+    return next;
+  }
+
+  async resolveEmployerSelfUpdateFiles(
+    userId: string,
+    dto: EmployerSelfUpdateDto,
+    files: {
+      logoFile?: Express.Multer.File;
+      ownerIdFile?: Express.Multer.File;
+      licenseFile?: Express.Multer.File;
+    }
+  ): Promise<EmployerSelfUpdateDto> {
+    const employer = await this.employers.findByUserId(userId);
+    if (!employer) throw new NotFoundException('Employer not found for user');
+
+    const next: EmployerSelfUpdateDto = { ...dto };
+
+    if (files.logoFile) next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
+    if (files.ownerIdFile) next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
+    if (files.licenseFile) next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
+
+    return next;
+  }
 
   async register(dto: EmployerRegisterDto) {
     await this.ensureUnique(dto);
@@ -93,6 +170,10 @@ export class EmployersService {
     const existing = await this.employers.findById(id);
     if (!existing) throw new NotFoundException('Employer not found');
 
+    const oldLogoUrl = existing.logoUrl ?? null;
+    const oldOwnerIdFileUrl = existing.ownerIdFileUrl ?? null;
+    const oldLicenseFileUrl = existing.licenseFileUrl ?? null;
+
     const nextLicenseNumber = dto.licenseNumber ?? existing.licenseNumber;
     const nextContactEmail = dto.contactEmail ?? existing.contactEmail;
     const nextContactPhone = dto.contactPhone ?? existing.contactPhone;
@@ -152,28 +233,23 @@ export class EmployersService {
       status: dto.status ?? existing.status
     });
 
+    if (dto.logoUrl !== undefined && oldLogoUrl && oldLogoUrl !== updated.logoUrl) {
+      await safeDeleteUploadByRelativePath(oldLogoUrl);
+    }
+
+    if (dto.ownerIdFileUrl !== undefined && oldOwnerIdFileUrl && oldOwnerIdFileUrl !== updated.ownerIdFileUrl) {
+      await safeDeleteUploadByRelativePath(oldOwnerIdFileUrl);
+    }
+
+    if (dto.licenseFileUrl !== undefined && oldLicenseFileUrl && oldLicenseFileUrl !== updated.licenseFileUrl) {
+      await safeDeleteUploadByRelativePath(oldLicenseFileUrl);
+    }
+
     await this.audit.log({
       performedBy,
       action: 'EMPLOYER_UPDATED_BY_ADMIN',
       entityType: 'Employer',
-      entityId: id,
-      meta: {
-        changes: {
-          organizationName: dto.organizationName,
-          country: dto.country,
-          contactEmail: dto.contactEmail,
-          contactPhone: dto.contactPhone,
-          address: dto.address,
-          logoUrl: dto.logoUrl,
-          ownerName: dto.ownerName,
-          ownerIdNumber: dto.ownerIdNumber,
-          ownerIdFileUrl: dto.ownerIdFileUrl,
-          licenseNumber: dto.licenseNumber,
-          licenseFileUrl: dto.licenseFileUrl,
-          licenseExpiry: dto.licenseExpiry,
-          status: dto.status
-        }
-      }
+      entityId: id
     });
 
     return updated;
@@ -182,6 +258,10 @@ export class EmployersService {
   async employerSelfUpdate(userId: string, dto: EmployerSelfUpdateDto) {
     const employer = await this.employers.findByUserId(userId);
     if (!employer) throw new NotFoundException('Employer not found for user');
+
+    const oldLogoUrl = employer.logoUrl ?? null;
+    const oldOwnerIdFileUrl = employer.ownerIdFileUrl ?? null;
+    const oldLicenseFileUrl = employer.licenseFileUrl ?? null;
 
     const nextLicenseNumber = dto.licenseNumber ?? employer.licenseNumber;
     const nextContactEmail = dto.contactEmail ?? employer.contactEmail;
@@ -200,17 +280,23 @@ export class EmployersService {
 
     if (dto.contactEmail && dto.contactEmail !== employer.contactEmail) {
       const emailExists = await this.employers.findByContactEmail(dto.contactEmail);
-      if (emailExists && emailExists.id !== employer.id) throw new ConflictException('Employer contact email already exists');
+      if (emailExists && emailExists.id !== employer.id) {
+        throw new ConflictException('Employer contact email already exists');
+      }
     }
 
     if (dto.contactPhone && dto.contactPhone !== employer.contactPhone) {
       const phoneExists = await this.employers.findByContactPhone(dto.contactPhone);
-      if (phoneExists && phoneExists.id !== employer.id) throw new ConflictException('Employer contact phone already exists');
+      if (phoneExists && phoneExists.id !== employer.id) {
+        throw new ConflictException('Employer contact phone already exists');
+      }
     }
 
     if (dto.licenseNumber && dto.licenseNumber !== employer.licenseNumber) {
       const licenseExists = await this.employers.findByLicenseNumber(dto.licenseNumber);
-      if (licenseExists && licenseExists.id !== employer.id) throw new ConflictException('Employer license number already exists');
+      if (licenseExists && licenseExists.id !== employer.id) {
+        throw new ConflictException('Employer license number already exists');
+      }
     }
 
     if (dto.ownerIdNumber !== undefined) {
@@ -239,6 +325,18 @@ export class EmployersService {
       licenseFileUrl: dto.licenseFileUrl ?? employer.licenseFileUrl,
       licenseExpiry: nextLicenseExpiry ?? null
     });
+
+    if (dto.logoUrl !== undefined && oldLogoUrl && oldLogoUrl !== updated.logoUrl) {
+      await safeDeleteUploadByRelativePath(oldLogoUrl);
+    }
+
+    if (dto.ownerIdFileUrl !== undefined && oldOwnerIdFileUrl && oldOwnerIdFileUrl !== updated.ownerIdFileUrl) {
+      await safeDeleteUploadByRelativePath(oldOwnerIdFileUrl);
+    }
+
+    if (dto.licenseFileUrl !== undefined && oldLicenseFileUrl && oldLicenseFileUrl !== updated.licenseFileUrl) {
+      await safeDeleteUploadByRelativePath(oldLicenseFileUrl);
+    }
 
     await this.audit.log({
       performedBy: userId,

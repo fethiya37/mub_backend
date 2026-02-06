@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsIn, IsInt, IsOptional, IsString, IsUrl, Min, MinLength } from 'class-validator';
+import { IsIn, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 import { ContractTypes } from './shared/enums.dto';
 import type { ContractType } from './shared/enums.dto';
 
@@ -9,7 +9,10 @@ export class CreateJobDto {
   @MinLength(2)
   jobTitle!: string;
 
-  @ApiProperty({ example: 'We are hiring a housekeeper for a family in Riyadh. Duties include cleaning, laundry, and basic meal prep.' })
+  @ApiProperty({
+    example:
+      'We are hiring a housekeeper for a family in Riyadh. Duties include cleaning, laundry, and basic meal prep.'
+  })
   @IsString()
   @MinLength(10)
   jobDescription!: string;
@@ -29,10 +32,9 @@ export class CreateJobDto {
   @IsString()
   salaryRange?: string;
 
-  @ApiPropertyOptional({ example: 'https://cdn.site.com/job-thumb.png' })
+  @ApiPropertyOptional({ example: '/uploads/jobs/thumbs/job-thumb.png' })
   @IsOptional()
   @IsString()
-  @IsUrl()
   thumbnailUrl?: string;
 
   @ApiProperty({ example: 2 })

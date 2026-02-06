@@ -7,6 +7,11 @@ import type { CreateJobDto } from '../dto/create-job.dto';
 import type { UpdateJobDto } from '../dto/update-job.dto';
 import type { AdminCreateJobForEmployerDto } from '../dto/admin/admin-create-job-for-employer.dto';
 import type { AdminUpdateJobForEmployerDto } from '../dto/admin/admin-update-job-for-employer.dto';
+import { safeDeleteUploadByRelativePath } from '../../../common/utils/upload/upload.utils';
+
+type JobFileOverrides = {
+  thumbnailUrl?: string | null;
+};
 
 @Injectable()
 export class EmployerJobsService {
@@ -17,9 +22,17 @@ export class EmployerJobsService {
     private readonly audit: AuditService
   ) {}
 
-  async create(userId: string, dto: CreateJobDto) {
+  private async deleteIfReplaced(oldPath: string | null | undefined, nextPath: string | null | undefined) {
+    if (!oldPath) return;
+    if (oldPath === nextPath) return;
+    await safeDeleteUploadByRelativePath(oldPath);
+  }
+
+  async create(userId: string, dto: CreateJobDto, files?: JobFileOverrides) {
     const employer = await this.access.getEmployerForUser(userId);
     this.access.ensureApproved(employer);
+
+    const thumbnailUrl = files?.thumbnailUrl !== undefined ? files.thumbnailUrl : dto.thumbnailUrl ?? null;
 
     const job = await this.jobs.create(employer.id, {
       jobTitle: dto.jobTitle,
@@ -27,7 +40,7 @@ export class EmployerJobsService {
       country: dto.country,
       city: dto.city ?? null,
       salaryRange: dto.salaryRange ?? null,
-      thumbnailUrl: dto.thumbnailUrl ?? null,
+      thumbnailUrl,
       vacancies: dto.vacancies,
       contractType: dto.contractType,
       status: dto.status ?? 'DRAFT'
@@ -44,7 +57,7 @@ export class EmployerJobsService {
     return job;
   }
 
-  async update(userId: string, jobId: string, dto: UpdateJobDto) {
+  async update(userId: string, jobId: string, dto: UpdateJobDto, files?: JobFileOverrides) {
     const employer = await this.access.getEmployerForUser(userId);
     this.access.ensureApproved(employer);
 
@@ -56,7 +69,20 @@ export class EmployerJobsService {
       throw new BadRequestException('Employer not approved');
     }
 
-    const job = await this.jobs.update(jobId, dto as any);
+    const requestedThumb =
+      files?.thumbnailUrl !== undefined ? files.thumbnailUrl : dto.thumbnailUrl === undefined ? undefined : dto.thumbnailUrl;
+
+    const nextThumbnailUrl =
+      requestedThumb === undefined ? existing.thumbnailUrl : requestedThumb === null ? null : requestedThumb;
+
+    const job = await this.jobs.update(jobId, {
+      ...dto,
+      thumbnailUrl: nextThumbnailUrl
+    } as any);
+
+    if (requestedThumb !== undefined) {
+      await this.deleteIfReplaced(existing.thumbnailUrl, nextThumbnailUrl);
+    }
 
     await this.audit.log({
       performedBy: userId,
@@ -75,7 +101,7 @@ export class EmployerJobsService {
     return this.jobs.listByEmployer(employer.id, status, page, pageSize);
   }
 
-  async adminCreate(adminUserId: string, dto: AdminCreateJobForEmployerDto) {
+  async adminCreate(adminUserId: string, dto: AdminCreateJobForEmployerDto, files?: JobFileOverrides) {
     const employer = await this.prisma.employer.findUnique({
       where: { id: dto.employerId },
       select: { id: true, status: true }
@@ -84,13 +110,15 @@ export class EmployerJobsService {
     if (!employer) throw new NotFoundException('Employer not found');
     if (employer.status !== 'APPROVED') throw new BadRequestException('Employer not approved');
 
+    const thumbnailUrl = files?.thumbnailUrl !== undefined ? files.thumbnailUrl : dto.thumbnailUrl ?? null;
+
     const job = await this.jobs.create(employer.id, {
       jobTitle: dto.jobTitle,
       jobDescription: dto.jobDescription,
       country: dto.country,
       city: dto.city ?? null,
       salaryRange: dto.salaryRange ?? null,
-      thumbnailUrl: dto.thumbnailUrl ?? null,
+      thumbnailUrl,
       vacancies: dto.vacancies,
       contractType: dto.contractType,
       status: dto.status ?? 'DRAFT'
@@ -107,7 +135,7 @@ export class EmployerJobsService {
     return job;
   }
 
-  async adminUpdate(adminUserId: string, dto: AdminUpdateJobForEmployerDto) {
+  async adminUpdate(adminUserId: string, dto: AdminUpdateJobForEmployerDto, files?: JobFileOverrides) {
     const employer = await this.prisma.employer.findUnique({
       where: { id: dto.employerId },
       select: { id: true, status: true }
@@ -124,7 +152,20 @@ export class EmployerJobsService {
       throw new BadRequestException('Employer not approved');
     }
 
-    const job = await this.jobs.update(dto.jobId, dto as any);
+    const requestedThumb =
+      files?.thumbnailUrl !== undefined ? files.thumbnailUrl : dto.thumbnailUrl === undefined ? undefined : dto.thumbnailUrl;
+
+    const nextThumbnailUrl =
+      requestedThumb === undefined ? existing.thumbnailUrl : requestedThumb === null ? null : requestedThumb;
+
+    const job = await this.jobs.update(dto.jobId, {
+      ...dto,
+      thumbnailUrl: nextThumbnailUrl
+    } as any);
+
+    if (requestedThumb !== undefined) {
+      await this.deleteIfReplaced(existing.thumbnailUrl, nextThumbnailUrl);
+    }
 
     await this.audit.log({
       performedBy: adminUserId,
