@@ -18,8 +18,10 @@ export class EmployerPrismaRepository extends EmployerRepository {
         registrationNumber: input.registrationNumber,
         address: input.address ?? null,
 
+        logoUrl: input.logoUrl ?? null,
+
         ownerName: input.ownerName,
-        ownerIdNumber: input.ownerIdNumber,
+        ownerIdNumber: input.ownerIdNumber ?? null,
         ownerIdFileUrl: input.ownerIdFileUrl ?? null,
 
         licenseNumber: input.licenseNumber,

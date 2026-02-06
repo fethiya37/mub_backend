@@ -420,8 +420,10 @@ model Employer {
   registrationNumber String  @unique
   address            String?
 
+  logoUrl String?
+
   ownerName      String
-  ownerIdNumber  String
+  ownerIdNumber  String?
   ownerIdFileUrl String?
   licenseNumber  String    @unique
   licenseFileUrl String
@@ -446,6 +448,7 @@ model Employer {
   @@index([licenseNumber])
   @@index([ownerIdNumber])
 }
+
 
 model EmployerApprovalLog {
   id         String                 @id @default(uuid())

@@ -5,6 +5,8 @@ import { EmployerRegistrationNumberService } from './employer-registration-numbe
 import { EmployerValidationService } from './employer-validation.service';
 import type { EmployerRegisterDto } from '../dto/employer-register.dto';
 import type { AdminCreateEmployerDto } from '../dto/admin/admin-create-employer.dto';
+import type { AdminUpdateEmployerDto } from '../dto/admin/admin-update-employer.dto';
+import type { EmployerSelfUpdateDto } from '../dto/employer/employer-self-update.dto';
 
 @Injectable()
 export class EmployersService {
@@ -13,7 +15,7 @@ export class EmployersService {
     private readonly audit: AuditService,
     private readonly regNo: EmployerRegistrationNumberService,
     private readonly validation: EmployerValidationService
-  ) { }
+  ) {}
 
   async register(dto: EmployerRegisterDto) {
     await this.ensureUnique(dto);
@@ -28,8 +30,10 @@ export class EmployersService {
       contactPhone: dto.contactPhone,
       address: dto.address ?? null,
 
+      logoUrl: dto.logoUrl ?? null,
+
       ownerName: dto.ownerName,
-      ownerIdNumber: dto.ownerIdNumber,
+      ownerIdNumber: dto.ownerIdNumber ?? null,
       ownerIdFileUrl: dto.ownerIdFileUrl ?? null,
 
       licenseNumber: dto.licenseNumber,
@@ -62,8 +66,10 @@ export class EmployersService {
       contactPhone: dto.contactPhone,
       address: dto.address ?? null,
 
+      logoUrl: dto.logoUrl ?? null,
+
       ownerName: dto.ownerName,
-      ownerIdNumber: dto.ownerIdNumber,
+      ownerIdNumber: dto.ownerIdNumber ?? null,
       ownerIdFileUrl: dto.ownerIdFileUrl ?? null,
 
       licenseNumber: dto.licenseNumber,
@@ -73,7 +79,6 @@ export class EmployersService {
       createdBy: 'ADMIN'
     });
 
-
     await this.audit.log({
       performedBy,
       action: 'EMPLOYER_CREATED_BY_ADMIN',
@@ -82,6 +87,167 @@ export class EmployersService {
     });
 
     return employer;
+  }
+
+  async adminUpdate(id: string, dto: AdminUpdateEmployerDto, performedBy: string) {
+    const existing = await this.employers.findById(id);
+    if (!existing) throw new NotFoundException('Employer not found');
+
+    const nextLicenseNumber = dto.licenseNumber ?? existing.licenseNumber;
+    const nextContactEmail = dto.contactEmail ?? existing.contactEmail;
+    const nextContactPhone = dto.contactPhone ?? existing.contactPhone;
+
+    const nextOwnerIdNumber = dto.ownerIdNumber === undefined ? existing.ownerIdNumber : dto.ownerIdNumber;
+
+    const nextLicenseExpiry =
+      dto.licenseExpiry === undefined
+        ? existing.licenseExpiry
+        : dto.licenseExpiry
+          ? new Date(dto.licenseExpiry)
+          : null;
+
+    this.validation.ensureLicenseExpiry(nextLicenseExpiry ?? null);
+
+    if (dto.contactEmail && dto.contactEmail !== existing.contactEmail) {
+      const emailExists = await this.employers.findByContactEmail(dto.contactEmail);
+      if (emailExists) throw new ConflictException('Employer contact email already exists');
+    }
+
+    if (dto.contactPhone && dto.contactPhone !== existing.contactPhone) {
+      const phoneExists = await this.employers.findByContactPhone(dto.contactPhone);
+      if (phoneExists) throw new ConflictException('Employer contact phone already exists');
+    }
+
+    if (dto.licenseNumber && dto.licenseNumber !== existing.licenseNumber) {
+      const licenseExists = await this.employers.findByLicenseNumber(dto.licenseNumber);
+      if (licenseExists) throw new ConflictException('Employer license number already exists');
+    }
+
+    if (dto.ownerIdNumber !== undefined) {
+      if (dto.ownerIdNumber) {
+        const ownerIdExists = await this.employers.findByOwnerIdNumber(dto.ownerIdNumber);
+        if (ownerIdExists && ownerIdExists.id !== existing.id) {
+          throw new ConflictException('Employer owner ID number already exists');
+        }
+      }
+    }
+
+    const updated = await this.employers.update(id, {
+      organizationName: dto.organizationName ?? existing.organizationName,
+      country: dto.country ?? existing.country,
+      contactEmail: nextContactEmail,
+      contactPhone: nextContactPhone,
+      address: dto.address ?? existing.address,
+
+      logoUrl: dto.logoUrl === undefined ? existing.logoUrl : dto.logoUrl,
+
+      ownerName: dto.ownerName ?? existing.ownerName,
+      ownerIdNumber: nextOwnerIdNumber ?? null,
+      ownerIdFileUrl: dto.ownerIdFileUrl === undefined ? existing.ownerIdFileUrl : dto.ownerIdFileUrl,
+
+      licenseNumber: nextLicenseNumber,
+      licenseFileUrl: dto.licenseFileUrl ?? existing.licenseFileUrl,
+      licenseExpiry: nextLicenseExpiry ?? null,
+
+      status: dto.status ?? existing.status
+    });
+
+    await this.audit.log({
+      performedBy,
+      action: 'EMPLOYER_UPDATED_BY_ADMIN',
+      entityType: 'Employer',
+      entityId: id,
+      meta: {
+        changes: {
+          organizationName: dto.organizationName,
+          country: dto.country,
+          contactEmail: dto.contactEmail,
+          contactPhone: dto.contactPhone,
+          address: dto.address,
+          logoUrl: dto.logoUrl,
+          ownerName: dto.ownerName,
+          ownerIdNumber: dto.ownerIdNumber,
+          ownerIdFileUrl: dto.ownerIdFileUrl,
+          licenseNumber: dto.licenseNumber,
+          licenseFileUrl: dto.licenseFileUrl,
+          licenseExpiry: dto.licenseExpiry,
+          status: dto.status
+        }
+      }
+    });
+
+    return updated;
+  }
+
+  async employerSelfUpdate(userId: string, dto: EmployerSelfUpdateDto) {
+    const employer = await this.employers.findByUserId(userId);
+    if (!employer) throw new NotFoundException('Employer not found for user');
+
+    const nextLicenseNumber = dto.licenseNumber ?? employer.licenseNumber;
+    const nextContactEmail = dto.contactEmail ?? employer.contactEmail;
+    const nextContactPhone = dto.contactPhone ?? employer.contactPhone;
+
+    const nextOwnerIdNumber = dto.ownerIdNumber === undefined ? employer.ownerIdNumber : dto.ownerIdNumber;
+
+    const nextLicenseExpiry =
+      dto.licenseExpiry === undefined
+        ? employer.licenseExpiry
+        : dto.licenseExpiry
+          ? new Date(dto.licenseExpiry)
+          : null;
+
+    this.validation.ensureLicenseExpiry(nextLicenseExpiry ?? null);
+
+    if (dto.contactEmail && dto.contactEmail !== employer.contactEmail) {
+      const emailExists = await this.employers.findByContactEmail(dto.contactEmail);
+      if (emailExists && emailExists.id !== employer.id) throw new ConflictException('Employer contact email already exists');
+    }
+
+    if (dto.contactPhone && dto.contactPhone !== employer.contactPhone) {
+      const phoneExists = await this.employers.findByContactPhone(dto.contactPhone);
+      if (phoneExists && phoneExists.id !== employer.id) throw new ConflictException('Employer contact phone already exists');
+    }
+
+    if (dto.licenseNumber && dto.licenseNumber !== employer.licenseNumber) {
+      const licenseExists = await this.employers.findByLicenseNumber(dto.licenseNumber);
+      if (licenseExists && licenseExists.id !== employer.id) throw new ConflictException('Employer license number already exists');
+    }
+
+    if (dto.ownerIdNumber !== undefined) {
+      if (dto.ownerIdNumber) {
+        const ownerIdExists = await this.employers.findByOwnerIdNumber(dto.ownerIdNumber);
+        if (ownerIdExists && ownerIdExists.id !== employer.id) {
+          throw new ConflictException('Employer owner ID number already exists');
+        }
+      }
+    }
+
+    const updated = await this.employers.update(employer.id, {
+      organizationName: dto.organizationName ?? employer.organizationName,
+      country: dto.country ?? employer.country,
+      contactEmail: nextContactEmail,
+      contactPhone: nextContactPhone,
+      address: dto.address ?? employer.address,
+
+      logoUrl: dto.logoUrl === undefined ? employer.logoUrl : dto.logoUrl,
+
+      ownerName: dto.ownerName ?? employer.ownerName,
+      ownerIdNumber: nextOwnerIdNumber ?? null,
+      ownerIdFileUrl: dto.ownerIdFileUrl === undefined ? employer.ownerIdFileUrl : dto.ownerIdFileUrl,
+
+      licenseNumber: nextLicenseNumber,
+      licenseFileUrl: dto.licenseFileUrl ?? employer.licenseFileUrl,
+      licenseExpiry: nextLicenseExpiry ?? null
+    });
+
+    await this.audit.log({
+      performedBy: userId,
+      action: 'EMPLOYER_SELF_UPDATED',
+      entityType: 'Employer',
+      entityId: employer.id
+    });
+
+    return updated;
   }
 
   list(filters: { status?: string; country?: string }, page: number, pageSize: number) {
@@ -104,8 +270,10 @@ export class EmployersService {
     const licenseExists = await this.employers.findByLicenseNumber(dto.licenseNumber);
     if (licenseExists) throw new ConflictException('Employer license number already exists');
 
-    const ownerIdExists = await this.employers.findByOwnerIdNumber(dto.ownerIdNumber);
-    if (ownerIdExists) throw new ConflictException('Employer owner ID number already exists');
+    if (dto.ownerIdNumber) {
+      const ownerIdExists = await this.employers.findByOwnerIdNumber(dto.ownerIdNumber);
+      if (ownerIdExists) throw new ConflictException('Employer owner ID number already exists');
+    }
   }
 
   private async createWithGeneratedRegNo(input: {
@@ -115,8 +283,10 @@ export class EmployersService {
     contactPhone: string;
     address: string | null;
 
+    logoUrl: string | null;
+
     ownerName: string;
-    ownerIdNumber: string;
+    ownerIdNumber: string | null;
     ownerIdFileUrl: string | null;
 
     licenseNumber: string;
@@ -144,5 +314,4 @@ export class EmployersService {
 
     throw new ConflictException('Failed to create employer');
   }
-
 }

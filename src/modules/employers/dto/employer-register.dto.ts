@@ -1,5 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsEmail, IsOptional, IsString, IsUrl, MinLength } from 'class-validator';
+import { IsDateString, IsEmail, IsOptional, IsString, MinLength } from 'class-validator';
 
 export class EmployerRegisterDto {
   @ApiProperty({ example: 'Al Noor Manpower LLC' })
@@ -26,20 +26,25 @@ export class EmployerRegisterDto {
   @IsString()
   address?: string;
 
+  @ApiPropertyOptional({ example: 'https://files.example.com/employers/logo.png' })
+  @IsOptional()
+  @IsString()
+  logoUrl?: string;
+
   @ApiProperty({ example: 'Ahmed Al Noor' })
   @IsString()
   @MinLength(2)
   ownerName!: string;
 
-  @ApiProperty({ example: '784-1988-1234567-1' })
+  @ApiPropertyOptional({ example: '784-1988-1234567-1' })
+  @IsOptional()
   @IsString()
   @MinLength(3)
-  ownerIdNumber!: string;
+  ownerIdNumber?: string;
 
   @ApiPropertyOptional({ example: 'https://files.example.com/owners/owner-id.pdf' })
   @IsOptional()
   @IsString()
-  @IsUrl()
   ownerIdFileUrl?: string;
 
   @ApiProperty({ example: 'LIC-2025-000123' })
@@ -49,7 +54,7 @@ export class EmployerRegisterDto {
 
   @ApiProperty({ example: 'https://files.example.com/licenses/lic-2025-000123.pdf' })
   @IsString()
-  @MinLength(10)
+  @MinLength(2)
   licenseFileUrl!: string;
 
   @ApiPropertyOptional({ example: '2030-12-31' })

@@ -6,8 +6,10 @@ export type EmployerCreateInput = {
   registrationNumber: string;
   address?: string | null;
 
+  logoUrl?: string | null;
+
   ownerName: string;
-  ownerIdNumber: string;
+  ownerIdNumber?: string | null;
   ownerIdFileUrl?: string | null;
 
   licenseNumber: string;

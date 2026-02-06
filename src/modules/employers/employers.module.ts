@@ -4,6 +4,7 @@ import { EmployersPublicController } from './presentation/employers-public.contr
 import { AdminEmployersController } from './presentation/admin-employers.controller';
 import { EmployerJobsController } from './presentation/employer-jobs.controller';
 import { PublicJobsController } from './presentation/public-jobs.controller';
+import { EmployerProfileController } from './presentation/employer-profile.controller';
 import { EmployersService } from './services/employers.service';
 import { EmployerApprovalService } from './services/employer-approval.service';
 import { EmployerAccessService } from './services/employer-access.service';
@@ -23,7 +24,13 @@ import { RbacModule } from '../rbac/rbac.module';
 
 @Module({
   imports: [AuditModule, AuthModule, RbacModule],
-  controllers: [EmployersPublicController, AdminEmployersController, EmployerJobsController, PublicJobsController],
+  controllers: [
+    EmployersPublicController,
+    AdminEmployersController,
+    EmployerJobsController,
+    PublicJobsController,
+    EmployerProfileController
+  ],
   providers: [
     PrismaService,
     EmployersService,

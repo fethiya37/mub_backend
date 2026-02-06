@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Param, Post, Query } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiTags } from '@nestjs/swagger';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { CurrentUserDecorator } from '../../../common/decorators/current-user.decorator';
@@ -6,6 +6,7 @@ import type { CurrentUser } from '../../../common/decorators/current-user.decora
 import { EmployersService } from '../services/employers.service';
 import { EmployerApprovalService } from '../services/employer-approval.service';
 import { AdminCreateEmployerDto } from '../dto/admin/admin-create-employer.dto';
+import { AdminUpdateEmployerDto } from '../dto/admin/admin-update-employer.dto';
 import { EmployerApproveDto } from '../dto/employer-approve.dto';
 import { EmployerRejectDto } from '../dto/employer-reject.dto';
 import { AdminListEmployersQueryDto } from '../dto/admin/admin-list-employers.query.dto';
@@ -40,6 +41,13 @@ export class AdminEmployersController {
     const employer = await this.employers.adminCreate(dto, user.userId);
     if (dto.autoApprove) return this.approval.approve(employer.id, user.userId, 'Auto approved by admin');
     return employer;
+  }
+
+  @RequirePermissions('EMPLOYER_MANAGE')
+  @Put(':id')
+  @ApiOperation({ summary: 'Admin updates employer' })
+  update(@Param('id') id: string, @Body() dto: AdminUpdateEmployerDto, @CurrentUserDecorator() user: CurrentUser) {
+    return this.employers.adminUpdate(id, dto, user.userId);
   }
 
   @RequirePermissions('EMPLOYER_APPROVE')
