@@ -1,4 +1,5 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { Type } from 'class-transformer';
 import { IsIn, IsInt, IsOptional, IsString, Min, MinLength } from 'class-validator';
 import { ContractTypes } from './shared/enums.dto';
 import type { ContractType } from './shared/enums.dto';
@@ -42,6 +43,7 @@ export class CreateJobDto {
   thumbnailUrl?: string | null;
 
   @ApiProperty({ example: 2 })
+  @Type(() => Number)
   @IsInt()
   @Min(1)
   vacancies!: number;
