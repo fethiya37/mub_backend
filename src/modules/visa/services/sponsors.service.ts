@@ -24,4 +24,14 @@ export class SponsorsService {
       phone: dto.phone ?? null
     });
   }
+
+  async get(id: string) {
+    const sponsor = await this.sponsors.findById(id);
+    if (!sponsor) throw new NotFoundException('Sponsor not found');
+    return sponsor;
+  }
+
+  list(filters: { q?: string }, page: number, pageSize: number) {
+    return this.sponsors.list({ q: filters.q }, page, pageSize);
+  }
 }

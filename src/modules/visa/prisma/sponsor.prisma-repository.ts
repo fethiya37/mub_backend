@@ -1,6 +1,6 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { SponsorRepository, type CreateSponsorInput, type UpdateSponsorInput } from '../repositories/sponsor.repository';
+import { SponsorRepository, type CreateSponsorInput, type SponsorListFilters, type UpdateSponsorInput } from '../repositories/sponsor.repository';
 
 @Injectable()
 export class SponsorPrismaRepository extends SponsorRepository {
@@ -31,5 +31,29 @@ export class SponsorPrismaRepository extends SponsorRepository {
         phone: 'phone' in input ? input.phone ?? null : undefined
       }
     });
+  }
+
+  async list(filters: SponsorListFilters, page: number, pageSize: number) {
+    const skip = (page - 1) * pageSize;
+
+    const where: any = {};
+    if (filters.q) {
+      where.OR = [
+        { fullName: { contains: filters.q, mode: 'insensitive' } },
+        { phone: { contains: filters.q, mode: 'insensitive' } }
+      ];
+    }
+
+    const [items, total] = await this.prisma.$transaction([
+      this.prisma.sponsor.findMany({
+        where,
+        orderBy: { updatedAt: 'desc' },
+        skip,
+        take: pageSize
+      }),
+      this.prisma.sponsor.count({ where })
+    ]);
+
+    return { items, total };
   }
 }

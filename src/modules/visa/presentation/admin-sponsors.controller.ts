@@ -1,5 +1,5 @@
-import { Body, Controller, Param, Post, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import { Body, Controller, Get, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import crypto from 'crypto';
@@ -33,6 +33,23 @@ function sponsorDiskStorage() {
 export class AdminSponsorsController {
   constructor(private readonly sponsors: SponsorsService) {}
 
+  @RequirePermissions('VISA_VIEW')
+  @Get()
+  @ApiOperation({ summary: 'List sponsors (paged)' })
+  @ApiQuery({ name: 'q', required: false, description: 'Search by fullName or phone' })
+  @ApiQuery({ name: 'page', required: false, example: 1 })
+  @ApiQuery({ name: 'pageSize', required: false, example: 50 })
+  list(@Query('q') q?: string, @Query('page') page?: string, @Query('pageSize') pageSize?: string) {
+    return this.sponsors.list({ q }, page ? Number(page) : 1, pageSize ? Number(pageSize) : 50);
+  }
+
+  @RequirePermissions('VISA_VIEW')
+  @Get(':id')
+  @ApiOperation({ summary: 'Get sponsor by id' })
+  get(@Param('id') id: string) {
+    return this.sponsors.get(id);
+  }
+
   @RequirePermissions('VISA_CREATE')
   @Post()
   @ApiOperation({ summary: 'Create sponsor' })
@@ -43,10 +60,7 @@ export class AdminSponsorsController {
       storage: sponsorDiskStorage()
     })
   )
-  create(
-    @Body() dto: AdminUpsertSponsorDto,
-    @UploadedFiles() files: { sponsorIdFile?: Express.Multer.File[] }
-  ) {
+  create(@Body() dto: AdminUpsertSponsorDto, @UploadedFiles() files: { sponsorIdFile?: Express.Multer.File[] }) {
     const sponsorIdFileUrl = files?.sponsorIdFile?.[0]
       ? `/uploads/visa/sponsors/${files.sponsorIdFile[0].filename}`
       : dto.sponsorIdFileUrl;
