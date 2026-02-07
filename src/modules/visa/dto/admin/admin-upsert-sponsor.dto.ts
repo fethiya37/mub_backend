@@ -7,10 +7,13 @@ export class AdminUpsertSponsorDto {
   @MinLength(2)
   fullName!: string;
 
-  @ApiPropertyOptional({ example: 'https://cdn.site.com/id.jpg' })
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  sponsorIdFile?: any;
+
+  @ApiPropertyOptional({ example: '/uploads/visa/sponsors/id.jpg' })
   @IsOptional()
   @IsString()
-  @IsUrl()
   sponsorIdFileUrl?: string;
 
   @ApiPropertyOptional({ example: '+2519xxxxxxx' })

@@ -67,7 +67,7 @@ export class AdminSponsorsController {
 
     return this.sponsors.create({
       ...dto,
-      sponsorIdFileUrl: sponsorIdFileUrl ?? undefined
+      sponsorIdFileUrl: sponsorIdFileUrl || undefined
     });
   }
 
@@ -92,7 +92,7 @@ export class AdminSponsorsController {
 
     return this.sponsors.update(id, {
       ...dto,
-      sponsorIdFileUrl: sponsorIdFileUrl ?? undefined
+      sponsorIdFileUrl: sponsorIdFileUrl || undefined
     });
   }
 }
