@@ -53,7 +53,7 @@ function visaDiskStorage() {
 @ApiBearerAuth()
 @Controller('api/admin/visa')
 export class AdminVisaController {
-  constructor(private readonly visas: VisasService) {}
+  constructor(private readonly visas: VisasService) { }
 
   @RequirePermissions('VISA_CREATE')
   @Post('cases')
@@ -170,6 +170,13 @@ export class AdminVisaController {
   @ApiOperation({ summary: 'Create return record and set case status to RETURNED' })
   createReturn(@CurrentUserDecorator() user: CurrentUser, @Body() dto: AdminCreateVisaReturnDto) {
     return this.visas.adminCreateReturn(user.userId, dto);
+  }
+
+  @RequirePermissions('VISA_UPDATE')
+  @Post('cases/:id/deploy')
+  @ApiOperation({ summary: 'Manually set visa case status to DEPLOYED' })
+  deployCase(@CurrentUserDecorator() user: CurrentUser, @Param('id') id: string) {
+    return this.visas.adminMarkDeployed(user.userId, id);
   }
 
   @RequirePermissions('VISA_UPDATE')

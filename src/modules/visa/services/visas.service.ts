@@ -1,4 +1,4 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 
 import { VisaCaseRepository } from '../repositories/visa-case.repository';
@@ -135,7 +135,6 @@ export class VisasService {
     return insurance;
   }
 
-
   async adminSetFingerprint(adminUserId: string, visaCaseId: string, dto: AdminSetFingerprintDto) {
     const c = await this.getCaseOrThrow(visaCaseId);
     this.status.ensureCaseActive(c.isActive);
@@ -236,7 +235,20 @@ export class VisasService {
     return created;
   }
 
-  async adminCloseCase(adminUserId: string, visaCaseId: string, dto: AdminCloseVisaCaseDto) {
+  async adminMarkDeployed(_adminUserId: string, visaCaseId: string) {
+    const c = await this.getCaseOrThrow(visaCaseId);
+    this.status.ensureCaseActive(c.isActive);
+
+    if (c.status === this.status.statusForClosed()) {
+      throw new BadRequestException('Cannot deploy a closed case');
+    }
+
+    return this.cases.update(visaCaseId, {
+      status: this.status.statusForDeployed()
+    });
+  }
+
+  async adminCloseCase(_adminUserId: string, visaCaseId: string, dto: AdminCloseVisaCaseDto) {
     const c = await this.getCaseOrThrow(visaCaseId);
     this.status.ensureCanClose(c.status);
 
