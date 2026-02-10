@@ -28,6 +28,16 @@ export type ListEmployerFilters = {
   employerId: string;
 };
 
+export type JobApplicationListItem = {
+  id: string;
+  jobPostingId: string;
+  jobTitle: string;
+  applicantId: string;
+  applicantName: string;
+  cvFileUrl: string;
+  status: string;
+};
+
 export abstract class JobApplicationRepository {
   abstract findById(id: string): Promise<any | null>;
   abstract findByApplicantJob(applicantId: string, jobPostingId: string): Promise<any | null>;
@@ -37,7 +47,7 @@ export abstract class JobApplicationRepository {
   abstract updateCv(id: string, cvFileUrl: string): Promise<any>;
   abstract setStatus(id: string, status: string): Promise<any>;
 
-  abstract listMy(applicantId: string, filters: ListMyFilters, page: number, pageSize: number): Promise<ListPage<any>>;
-  abstract listAdmin(filters: ListAdminFilters, page: number, pageSize: number): Promise<ListPage<any>>;
-  abstract listEmployer(filters: ListEmployerFilters, page: number, pageSize: number): Promise<ListPage<any>>;
+  abstract listMy(applicantId: string, filters: ListMyFilters, page: number, pageSize: number): Promise<ListPage<JobApplicationListItem>>;
+  abstract listAdmin(filters: ListAdminFilters, page: number, pageSize: number): Promise<ListPage<JobApplicationListItem>>;
+  abstract listEmployer(filters: ListEmployerFilters, page: number, pageSize: number): Promise<ListPage<JobApplicationListItem>>;
 }

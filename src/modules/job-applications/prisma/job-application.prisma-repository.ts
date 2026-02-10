@@ -1,6 +1,13 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { JobApplicationRepository, type ApplyOrReapplyInput, type ListAdminFilters, type ListEmployerFilters, type ListMyFilters } from '../repositories/job-application.repository';
+import {
+  JobApplicationRepository,
+  type ApplyOrReapplyInput,
+  type ListAdminFilters,
+  type ListEmployerFilters,
+  type ListMyFilters,
+  type JobApplicationListItem
+} from '../repositories/job-application.repository';
 
 @Injectable()
 export class JobApplicationPrismaRepository extends JobApplicationRepository {
@@ -55,6 +62,23 @@ export class JobApplicationPrismaRepository extends JobApplicationRepository {
     });
   }
 
+  private fullNameOf(a: { firstName?: string | null; middleName?: string | null; lastName?: string | null } | null | undefined) {
+    const parts = [a?.firstName, a?.middleName, a?.lastName].filter((x) => x && String(x).trim().length > 0) as string[];
+    return parts.join(' ').trim();
+  }
+
+  private toListItem(row: any): JobApplicationListItem {
+    return {
+      id: row.id,
+      jobPostingId: row.jobPostingId,
+      jobTitle: row.jobPosting?.jobTitle ?? '',
+      applicantId: row.applicantId,
+      applicantName: this.fullNameOf(row.applicant),
+      cvFileUrl: row.cvFileUrl,
+      status: row.status
+    };
+  }
+
   async listMy(applicantId: string, filters: ListMyFilters, page: number, pageSize: number) {
     const skip = (page - 1) * pageSize;
 
@@ -62,17 +86,21 @@ export class JobApplicationPrismaRepository extends JobApplicationRepository {
     if (filters.status) where.status = filters.status;
     if (filters.jobPostingId) where.jobPostingId = filters.jobPostingId;
 
-    const [items, total] = await this.prisma.$transaction([
+    const [rows, total] = await this.prisma.$transaction([
       this.prisma.jobApplication.findMany({
         where,
         orderBy: { id: 'desc' },
         skip,
-        take: pageSize
+        take: pageSize,
+        include: {
+          jobPosting: { select: { jobTitle: true } },
+          applicant: { select: { firstName: true, middleName: true, lastName: true } }
+        }
       }),
       this.prisma.jobApplication.count({ where })
     ]);
 
-    return { items, total, page, pageSize };
+    return { items: rows.map((r) => this.toListItem(r)), total, page, pageSize };
   }
 
   async listAdmin(filters: ListAdminFilters, page: number, pageSize: number) {
@@ -83,17 +111,21 @@ export class JobApplicationPrismaRepository extends JobApplicationRepository {
     if (filters.jobPostingId) where.jobPostingId = filters.jobPostingId;
     if (filters.applicantId) where.applicantId = filters.applicantId;
 
-    const [items, total] = await this.prisma.$transaction([
+    const [rows, total] = await this.prisma.$transaction([
       this.prisma.jobApplication.findMany({
         where,
         orderBy: { id: 'desc' },
         skip,
-        take: pageSize
+        take: pageSize,
+        include: {
+          jobPosting: { select: { jobTitle: true } },
+          applicant: { select: { firstName: true, middleName: true, lastName: true } }
+        }
       }),
       this.prisma.jobApplication.count({ where })
     ]);
 
-    return { items, total, page, pageSize };
+    return { items: rows.map((r) => this.toListItem(r)), total, page, pageSize };
   }
 
   async listEmployer(filters: ListEmployerFilters, page: number, pageSize: number) {
@@ -106,16 +138,20 @@ export class JobApplicationPrismaRepository extends JobApplicationRepository {
     if (filters.status) where.status = filters.status;
     if (filters.jobPostingId) where.jobPostingId = filters.jobPostingId;
 
-    const [items, total] = await this.prisma.$transaction([
+    const [rows, total] = await this.prisma.$transaction([
       this.prisma.jobApplication.findMany({
         where,
         orderBy: { id: 'desc' },
         skip,
-        take: pageSize
+        take: pageSize,
+        include: {
+          jobPosting: { select: { jobTitle: true } },
+          applicant: { select: { firstName: true, middleName: true, lastName: true } }
+        }
       }),
       this.prisma.jobApplication.count({ where })
     ]);
 
-    return { items, total, page, pageSize };
+    return { items: rows.map((r) => this.toListItem(r)), total, page, pageSize };
   }
 }

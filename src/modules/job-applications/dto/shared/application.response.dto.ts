@@ -8,7 +8,13 @@ export class ApplicationResponseDto {
   jobPostingId!: string;
 
   @ApiProperty()
+  jobTitle!: string;
+
+  @ApiProperty()
   applicantId!: string;
+
+  @ApiProperty()
+  applicantName!: string;
 
   @ApiProperty()
   cvFileUrl!: string;
