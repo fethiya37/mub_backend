@@ -1,6 +1,12 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { VisaCaseRepository, type AdminListVisaCasesFilters, type ApplicantListVisaCasesFilters, type CreateVisaCaseInput, type EmployerListVisaCasesFilters } from '../repositories/visa-case.repository';
+import {
+  VisaCaseRepository,
+  type AdminListVisaCasesFilters,
+  type ApplicantListVisaCasesFilters,
+  type CreateVisaCaseInput,
+  type EmployerListVisaCasesFilters
+} from '../repositories/visa-case.repository';
 
 @Injectable()
 export class VisaCasePrismaRepository extends VisaCaseRepository {
@@ -9,7 +15,23 @@ export class VisaCasePrismaRepository extends VisaCaseRepository {
   }
 
   findById(id: string) {
-    return this.prisma.visaCase.findUnique({ where: { id } });
+    return this.prisma.visaCase.findUnique({
+      where: { id },
+      select: {
+        id: true,
+        applicantId: true,
+        partnerId: true,
+        jobId: true,
+        destinationCountry: true,
+        status: true,
+        isActive: true,
+        caseManagerUserId: true,
+        sponsorId: true,
+        completedStatuses: true,
+        createdAt: true,
+        updatedAt: true
+      }
+    });
   }
 
   create(input: CreateVisaCaseInput) {
@@ -22,7 +44,8 @@ export class VisaCasePrismaRepository extends VisaCaseRepository {
         caseManagerUserId: input.caseManagerUserId,
         sponsorId: input.sponsorId ?? null,
         status: 'INITIATED',
-        isActive: true
+        isActive: true,
+        completedStatuses: []
       }
     });
   }
@@ -46,7 +69,26 @@ export class VisaCasePrismaRepository extends VisaCaseRepository {
         where,
         orderBy: { updatedAt: 'desc' },
         skip,
-        take: pageSize
+        take: pageSize,
+        select: {
+          id: true,
+          applicantId: true,
+          partnerId: true,
+          jobId: true,
+          destinationCountry: true,
+          status: true,
+          isActive: true,
+          caseManagerUserId: true,
+          sponsorId: true,
+          completedStatuses: true,
+          createdAt: true,
+          updatedAt: true,
+          applicant: { select: { firstName: true, middleName: true, lastName: true, phone: true } },
+          partner: { select: { organizationName: true } },
+          job: { select: { jobTitle: true } },
+          caseManager: { select: { fullName: true, phone: true, email: true } },
+          sponsor: { select: { fullName: true } }
+        }
       }),
       this.prisma.visaCase.count({ where })
     ]);
@@ -66,7 +108,26 @@ export class VisaCasePrismaRepository extends VisaCaseRepository {
         where,
         orderBy: { updatedAt: 'desc' },
         skip,
-        take: pageSize
+        take: pageSize,
+        select: {
+          id: true,
+          applicantId: true,
+          partnerId: true,
+          jobId: true,
+          destinationCountry: true,
+          status: true,
+          isActive: true,
+          caseManagerUserId: true,
+          sponsorId: true,
+          completedStatuses: true,
+          createdAt: true,
+          updatedAt: true,
+          applicant: { select: { firstName: true, middleName: true, lastName: true, phone: true } },
+          partner: { select: { organizationName: true } },
+          job: { select: { jobTitle: true } },
+          caseManager: { select: { fullName: true, phone: true, email: true } },
+          sponsor: { select: { fullName: true } }
+        }
       }),
       this.prisma.visaCase.count({ where })
     ]);
@@ -77,9 +138,7 @@ export class VisaCasePrismaRepository extends VisaCaseRepository {
   async listEmployer(filters: EmployerListVisaCasesFilters, page: number, pageSize: number) {
     const skip = (page - 1) * pageSize;
 
-    const where: any = {
-      job: { employerId: filters.employerId }
-    };
+    const where: any = { job: { employerId: filters.employerId } };
     if (filters.jobId) where.jobId = filters.jobId;
     if (filters.status) where.status = filters.status;
     if (typeof filters.isActive === 'boolean') where.isActive = filters.isActive;
@@ -89,7 +148,26 @@ export class VisaCasePrismaRepository extends VisaCaseRepository {
         where,
         orderBy: { updatedAt: 'desc' },
         skip,
-        take: pageSize
+        take: pageSize,
+        select: {
+          id: true,
+          applicantId: true,
+          partnerId: true,
+          jobId: true,
+          destinationCountry: true,
+          status: true,
+          isActive: true,
+          caseManagerUserId: true,
+          sponsorId: true,
+          completedStatuses: true,
+          createdAt: true,
+          updatedAt: true,
+          applicant: { select: { firstName: true, middleName: true, lastName: true, phone: true } },
+          partner: { select: { organizationName: true } },
+          job: { select: { jobTitle: true } },
+          caseManager: { select: { fullName: true, phone: true, email: true } },
+          sponsor: { select: { fullName: true } }
+        }
       }),
       this.prisma.visaCase.count({ where })
     ]);

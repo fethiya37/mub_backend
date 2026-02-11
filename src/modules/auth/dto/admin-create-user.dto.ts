@@ -1,5 +1,5 @@
-import { ApiProperty } from '@nestjs/swagger';
-import { IsEmail, IsEnum, IsString } from 'class-validator';
+import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
+import { IsEmail, IsEnum, IsOptional, IsString, MinLength } from 'class-validator';
 
 export enum AdminCreateUserRole {
   MUB_STAFF = 'MUB_STAFF',
@@ -8,6 +8,12 @@ export enum AdminCreateUserRole {
 }
 
 export class AdminCreateUserDto {
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  @MinLength(2)
+  fullName?: string;
+
   @ApiProperty({ example: '+251922222222' })
   @IsString()
   phone!: string;

@@ -31,6 +31,8 @@ export class JwtStrategy extends PassportStrategy(Strategy) {
       userId,
       email: user.email,
       phone: user.phone,
+      fullName: (user as any).fullName ?? null,
+      status: (user as any).status ?? 'PENDING',
       isActive: user.isActive,
       applicantVerified: user.applicantVerified,
       emailVerified: (user as any).emailVerified ?? false,

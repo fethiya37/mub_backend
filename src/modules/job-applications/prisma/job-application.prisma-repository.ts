@@ -67,11 +67,11 @@ export class JobApplicationPrismaRepository extends JobApplicationRepository {
     return parts.join(' ').trim();
   }
 
-  private toListItem(row: any): JobApplicationListItem {
+  private toListItem(row: any, jobTitle: string): JobApplicationListItem {
     return {
       id: row.id,
       jobPostingId: row.jobPostingId,
-      jobTitle: row.jobPosting?.jobTitle ?? '',
+      jobTitle,
       applicantId: row.applicantId,
       applicantName: this.fullNameOf(row.applicant),
       cvFileUrl: row.cvFileUrl,
@@ -100,7 +100,12 @@ export class JobApplicationPrismaRepository extends JobApplicationRepository {
       this.prisma.jobApplication.count({ where })
     ]);
 
-    return { items: rows.map((r) => this.toListItem(r)), total, page, pageSize };
+    return {
+      items: rows.map((r) => this.toListItem(r, r.jobPosting?.jobTitle ?? 'Unknown Job')),
+      total,
+      page,
+      pageSize
+    };
   }
 
   async listAdmin(filters: ListAdminFilters, page: number, pageSize: number) {
@@ -125,7 +130,12 @@ export class JobApplicationPrismaRepository extends JobApplicationRepository {
       this.prisma.jobApplication.count({ where })
     ]);
 
-    return { items: rows.map((r) => this.toListItem(r)), total, page, pageSize };
+    return {
+      items: rows.map((r) => this.toListItem(r, r.jobPosting?.jobTitle ?? 'Unknown Job')),
+      total,
+      page,
+      pageSize
+    };
   }
 
   async listEmployer(filters: ListEmployerFilters, page: number, pageSize: number) {
@@ -144,14 +154,31 @@ export class JobApplicationPrismaRepository extends JobApplicationRepository {
         orderBy: { id: 'desc' },
         skip,
         take: pageSize,
-        include: {
-          jobPosting: { select: { jobTitle: true } },
+        select: {
+          id: true,
+          jobPostingId: true,
+          applicantId: true,
+          cvFileUrl: true,
+          status: true,
           applicant: { select: { firstName: true, middleName: true, lastName: true } }
         }
       }),
       this.prisma.jobApplication.count({ where })
     ]);
 
-    return { items: rows.map((r) => this.toListItem(r)), total, page, pageSize };
+    const jobIds = Array.from(new Set(rows.map((r) => r.jobPostingId)));
+    const jobs = await this.prisma.jobPosting.findMany({
+      where: { id: { in: jobIds } },
+      select: { id: true, jobTitle: true }
+    });
+
+    const jobTitleById = new Map(jobs.map((j) => [j.id, j.jobTitle]));
+
+    return {
+      items: rows.map((r) => this.toListItem(r, jobTitleById.get(r.jobPostingId) ?? 'Unknown Job')),
+      total,
+      page,
+      pageSize
+    };
   }
 }

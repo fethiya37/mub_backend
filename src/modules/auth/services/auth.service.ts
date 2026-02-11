@@ -38,7 +38,7 @@ export class AuthService {
     private readonly actionTokens: AccountActionTokensService,
     private readonly audit: AuditService,
     private readonly mail: MailService
-  ) { }
+  ) {}
 
   async login(dto: LoginDto, ctx?: { ip?: string | null; ua?: string | null }) {
     const user = await this.users.findByIdentifier(dto.identifier);
@@ -62,6 +62,18 @@ export class AuthService {
     await this.loginPolicy.onSuccessfulLogin(user.id);
 
     const { roles, permissions } = await this.evaluator.getUserRolesAndPermissions(user.id);
+
+    const isApplicant = roles.includes('APPLICANT');
+    if (isApplicant && user.status !== 'APPROVED') {
+      await this.audit.log({
+        performedBy: user.id,
+        action: 'AUTH_LOGIN_BLOCKED',
+        ipAddress: ctx?.ip ?? null,
+        userAgent: ctx?.ua ?? null
+      });
+      throw new UnauthorizedException('Account is pending approval');
+    }
+
     const { accessToken, expiresInSeconds } = this.tokens.signAccessToken({ userId: user.id, tokenVersion: user.tokenVersion });
 
     const { token: refreshToken, jti } = this.tokens.generateRefreshToken();
@@ -152,7 +164,9 @@ export class AuthService {
       email: dto.email,
       passwordHash,
       isActive: true,
-      applicantVerified: true
+      applicantVerified: true,
+      fullName: dto.fullName ?? null,
+      status: 'PENDING'
     });
 
     await this.rbac.replaceUserRoles(user.id, [dto.role as AdminCreatableRole]);
@@ -165,7 +179,7 @@ export class AuthService {
       meta: { role: dto.role }
     });
 
-    await this.sendAccountSetupEmail(user.id, dto.email, dto.role);
+    await this.sendAccountSetupEmail(user.id, dto.email, dto.fullName ?? dto.role);
 
     return { ok: true, userId: user.id };
   }
@@ -242,7 +256,6 @@ export class AuthService {
     return { ok: true };
   }
 
-
   async verifyEmail(dto: VerifyEmailDto) {
     const row = await this.actionTokens.consume(dto.token, 'EMAIL_VERIFY');
 
@@ -250,13 +263,12 @@ export class AuthService {
     if (!user || !user.email) throw new BadRequestException('Invalid token');
 
     if ((user as any).emailVerified !== true) {
-      await this.users.update(user.id, { emailVerified: true, emailVerifiedAt: new Date() } as any);
+      await this.users.update(user.id, { emailVerified: true, emailVerifiedAt: new Date() });
     }
 
     await this.audit.log({ performedBy: user.id, action: 'EMAIL_VERIFIED' });
     return { ok: true };
   }
-
 
   async changePassword(userId: string, dto: ChangePasswordDto) {
     const user = await this.users.findById(userId);

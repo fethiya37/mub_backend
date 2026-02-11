@@ -6,6 +6,13 @@ datasource db {
   provider = "postgresql"
 }
 
+enum UserStatus {
+  PENDING
+  APPROVED
+  REJECTED
+}
+
+
 model User {
   id                String  @id @default(uuid())
   email             String? @unique
@@ -13,6 +20,9 @@ model User {
   passwordHash      String
   isActive          Boolean @default(true)
   applicantVerified Boolean @default(false)
+
+  fullName String?
+  status   UserStatus @default(PENDING)
 
   emailVerified   Boolean   @default(false)
   emailVerifiedAt DateTime?
@@ -36,6 +46,8 @@ model User {
   localAgencyApprovalLogs LocalAgencyApprovalLog[] @relation("LocalAgencyActionBy")
   visaCases               VisaCase[]
 }
+
+
 
 model Role {
   id          String   @id @default(uuid())
@@ -572,6 +584,8 @@ model VisaCase {
   caseManagerUserId  String
   sponsorId          String?
 
+  completedStatuses  VisaCaseStatus[] @default([])
+
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
@@ -602,6 +616,7 @@ model VisaCase {
   @@index([sponsorId])
   @@index([isActive])
 }
+
 
 model VisaMedical {
   id            String               @id @default(uuid())

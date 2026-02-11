@@ -15,6 +15,9 @@ export const PERMISSIONS = [
   'USER_UPDATE',
   'USER_SUSPEND',
   'USER_REACTIVATE',
+  'USER_APPROVE',
+  'USER_REJECT',
+
 
   'RBAC_MANAGE',
 
@@ -154,7 +157,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'NOTIFICATION_SEND',
     'COMMUNICATION_SEND',
 
-    'REPORT_VIEW'
+    'REPORT_VIEW',
   ],
 
   [ROLES.LOCAL_AGENCY]: [
