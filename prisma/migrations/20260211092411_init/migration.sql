@@ -1,4 +1,7 @@
 -- CreateEnum
+CREATE TYPE "UserStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED');
+
+-- CreateEnum
 CREATE TYPE "AccountActionTokenType" AS ENUM ('ACCOUNT_SETUP', 'PASSWORD_RESET', 'EMAIL_VERIFY');
 
 -- CreateEnum
@@ -57,6 +60,8 @@ CREATE TABLE "User" (
     "passwordHash" TEXT NOT NULL,
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "applicantVerified" BOOLEAN NOT NULL DEFAULT false,
+    "fullName" TEXT,
+    "status" "UserStatus" NOT NULL DEFAULT 'PENDING',
     "emailVerified" BOOLEAN NOT NULL DEFAULT false,
     "emailVerifiedAt" TIMESTAMP(3),
     "failedLoginCount" INTEGER NOT NULL DEFAULT 0,
@@ -397,6 +402,7 @@ CREATE TABLE "VisaCase" (
     "isActive" BOOLEAN NOT NULL DEFAULT true,
     "caseManagerUserId" TEXT NOT NULL,
     "sponsorId" TEXT,
+    "completedStatuses" "VisaCaseStatus"[] DEFAULT ARRAY[]::"VisaCaseStatus"[],
     "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
     "updatedAt" TIMESTAMP(3) NOT NULL,
 

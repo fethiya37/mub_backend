@@ -45,7 +45,7 @@ export class AdminApplicantsController {
 
   @RequirePermissions('APPLICANT_UPDATE')
   @Patch(':applicantId/verify')
-  @ApiOperation({ summary: 'Verify applicant (SUBMITTED -> VERIFIED) and create User' })
+  @ApiOperation({ summary: 'Verify applicant (SUBMITTED -> VERIFIED) and approve User' })
   @ApiResponse({ status: 200, schema: { example: { ok: true, applicantId: 'uuid', userId: 'uuid' } } })
   verify(@Param('applicantId') applicantId: string, @Body() _dto: VerifyApplicantDto, @CurrentUserDecorator() user: CurrentUser) {
     return this.review.verify(applicantId, user.userId);

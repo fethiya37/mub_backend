@@ -154,10 +154,11 @@ export class AgentRegisterApplicantDto {
 
   @ApiPropertyOptional({ type: [ApplicantSkillDto] })
   @IsOptional()
-  @JsonArrayOf(ApplicantSkillDto)
+  @JsonArrayOf(ApplicantSkillDto, { fieldName: 'skills', allowSingleObject: true })
   @IsArray()
   @ValidateNested({ each: true })
   skills?: ApplicantSkillDto[];
+
 
   @ApiPropertyOptional({ type: [ApplicantQualificationDto] })
   @IsOptional()

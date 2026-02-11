@@ -1,4 +1,4 @@
-import { Body, Controller, Get, Post, Put, Param, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
+import { Body, Controller, Get, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
 import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
@@ -10,6 +10,7 @@ import { CurrentUserDecorator } from '../../../common/decorators/current-user.de
 import type { CurrentUser } from '../../../common/decorators/current-user.decorator';
 
 import { DraftUpsertApplicantDto } from '../dto/public/draft-upsert-applicant.dto';
+import { SubmitApplicantDto } from '../dto/public/submit-applicant.dto';
 import { ApplicantsService } from '../services/applicants.service';
 import { buildUploadsRoot, ensureDir, maxUploadBytes, safeExt } from '../../../common/utils/upload/upload.utils';
 
@@ -45,18 +46,11 @@ function applicantDiskStorage() {
   });
 }
 
-function parseJsonArray<T>(v: any): T[] | undefined {
-  if (v === undefined || v === null || v === '') return undefined;
-  if (Array.isArray(v)) return v as any;
-  if (typeof v === 'string') return JSON.parse(v) as T[];
-  return undefined;
-}
-
 @ApiTags('Local Agency Applicants')
 @ApiBearerAuth()
 @Controller('api/local-agency/applicants')
 export class AgentApplicantsController {
-  constructor(private readonly applicants: ApplicantsService) { }
+  constructor(private readonly applicants: ApplicantsService) {}
 
   @RequirePermissions('APPLICANT_CREATE')
   @Put()
@@ -130,8 +124,8 @@ export class AgentApplicantsController {
 
   @RequirePermissions('APPLICANT_UPDATE')
   @Post(':applicantId/submit')
-  @ApiOperation({ summary: 'Submit applicant created by this Local Agency (DRAFT/REJECTED → SUBMITTED)' })
-  submit(@CurrentUserDecorator() user: CurrentUser, @Param('applicantId') applicantId: string) {
-    return this.applicants.agentSubmit(user.userId, applicantId);
+  @ApiOperation({ summary: 'Submit applicant created by this Local Agency and create Applicant User (DRAFT/REJECTED → SUBMITTED)' })
+  submit(@CurrentUserDecorator() user: CurrentUser, @Param('applicantId') applicantId: string, @Body() dto: SubmitApplicantDto) {
+    return this.applicants.agentSubmit(user.userId, applicantId, dto.password);
   }
 }

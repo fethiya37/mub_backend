@@ -1,5 +1,5 @@
-import { Transform } from 'class-transformer';
-import { plainToInstance } from 'class-transformer';
+import { BadRequestException } from '@nestjs/common';
+import { Transform, plainToInstance } from 'class-transformer';
 
 type Ctor<T> = new (...args: any[]) => T;
 
@@ -37,18 +37,41 @@ export function ToBoolean() {
   });
 }
 
-export function JsonArrayOf<T>(cls: Ctor<T>) {
+export function JsonArrayOf<T>(
+  cls: Ctor<T>,
+  opts?: { fieldName?: string; allowSingleObject?: boolean }
+) {
+  const fieldName = opts?.fieldName ?? 'value';
+  const allowSingleObject = opts?.allowSingleObject ?? false;
+
   return Transform(({ value }) => {
     if (value === undefined || value === null || value === '') return undefined;
 
-    const parsed =
-      Array.isArray(value)
-        ? value
-        : typeof value === 'string'
-          ? JSON.parse(value)
-          : value;
+    let parsed: any = value;
 
-    if (!Array.isArray(parsed)) return parsed;
+    if (typeof value === 'string') {
+      const raw = value.trim();
+      if (raw.startsWith('[') || raw.startsWith('{')) {
+        try {
+          parsed = JSON.parse(raw);
+        } catch (e: any) {
+          throw new BadRequestException(
+            `${fieldName} must be valid JSON. ${e?.message ?? ''}`.trim()
+          );
+        }
+      } else {
+        throw new BadRequestException(`${fieldName} must be a JSON array`);
+      }
+    }
+
+    if (allowSingleObject && parsed && !Array.isArray(parsed) && typeof parsed === 'object') {
+      parsed = [parsed];
+    }
+
+    if (!Array.isArray(parsed)) {
+      throw new BadRequestException(`${fieldName} must be a JSON array`);
+    }
+
     return plainToInstance(cls, parsed);
   });
 }

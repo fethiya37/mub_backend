@@ -148,35 +148,43 @@ export class DraftUpsertApplicantDto {
 
   @ApiPropertyOptional({ type: [ApplicantEmergencyContactDto] })
   @IsOptional()
-  @JsonArrayOf(ApplicantEmergencyContactDto)
+  @JsonArrayOf(ApplicantEmergencyContactDto, { fieldName: 'emergencyContacts' })
   @IsArray()
   @ValidateNested({ each: true })
   emergencyContacts?: ApplicantEmergencyContactDto[];
 
   @ApiPropertyOptional({ type: [ApplicantSkillDto] })
   @IsOptional()
-  @JsonArrayOf(ApplicantSkillDto)
+  @JsonArrayOf(ApplicantSkillDto, { fieldName: 'skills', allowSingleObject: true })
   @IsArray()
   @ValidateNested({ each: true })
   skills?: ApplicantSkillDto[];
 
   @ApiPropertyOptional({ type: [ApplicantQualificationDto] })
   @IsOptional()
-  @JsonArrayOf(ApplicantQualificationDto)
+  @JsonArrayOf(ApplicantQualificationDto, { fieldName: 'qualifications' })
   @IsArray()
   @ValidateNested({ each: true })
   qualifications?: ApplicantQualificationDto[];
 
   @ApiPropertyOptional({ type: [ApplicantWorkExperienceDto] })
   @IsOptional()
-  @JsonArrayOf(ApplicantWorkExperienceDto)
+  @JsonArrayOf(ApplicantWorkExperienceDto, { fieldName: 'workExperiences' })
   @IsArray()
   @ValidateNested({ each: true })
   workExperiences?: ApplicantWorkExperienceDto[];
 
-  @ApiPropertyOptional({ type: [ApplicantDocumentDto] })
+  @ApiPropertyOptional({
+    type: [ApplicantDocumentDto],
+    example: [
+      { documentType: 'PASSPORT', fileUrl: '/uploads/applicants/documents/passport.pdf', status: 'PENDING' },
+      { documentType: 'PERSONAL_PHOTO', fileUrl: '/uploads/applicants/photos/photo.jpg', status: 'PENDING' },
+      { documentType: 'COC_CERTIFICATE', fileUrl: '/uploads/applicants/certificates/coc.pdf', status: 'PENDING' },
+      { documentType: 'APPLICANT_ID', fileUrl: '/uploads/applicants/ids/id.pdf', status: 'PENDING' }
+    ]
+  })
   @IsOptional()
-  @JsonArrayOf(ApplicantDocumentDto)
+  @JsonArrayOf(ApplicantDocumentDto, { fieldName: 'documents' })
   @IsArray()
   @ValidateNested({ each: true })
   documents?: ApplicantDocumentDto[];

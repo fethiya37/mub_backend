@@ -163,7 +163,10 @@ export class PublicApplicantsController {
     )
   )
   @ApiOperation({ summary: 'Update draft using Draft token and rotate token (supports multipart files)' })
-  @ApiResponse({ status: 200, schema: { example: { ok: true, draftToken: 'base64url-token', draftTokenExpiresAt: '2026-01-23T10:00:00.000Z' } } })
+  @ApiResponse({
+    status: 200,
+    schema: { example: { ok: true, draftToken: 'base64url-token', draftTokenExpiresAt: '2026-01-23T10:00:00.000Z' } }
+  })
   updateDraft(@Req() req: any, @Body() dto: DraftUpsertApplicantDto, @UploadedFiles() files: Record<string, Express.Multer.File[]>) {
     const fileUrls: Record<string, string> = {};
 
@@ -195,9 +198,9 @@ export class PublicApplicantsController {
   @UseGuards(DraftTokenGuard)
   @ApiSecurity('draft')
   @Post('submit')
-  @ApiOperation({ summary: 'Submit draft for admin review (DRAFT/REJECTED → SUBMITTED)' })
-  @ApiResponse({ status: 200, schema: { example: { ok: true, applicantId: 'uuid-applicant-id' } } })
-  submit(@Req() req: any, @Body() _dto: SubmitApplicantDto) {
-    return this.applicants.submit(req.applicantId, req.draftTokenRecordId);
+  @ApiOperation({ summary: 'Submit draft for admin review and create Applicant User (DRAFT/REJECTED → SUBMITTED)' })
+  @ApiResponse({ status: 200, schema: { example: { ok: true, applicantId: 'uuid-applicant-id', userId: 'uuid-user-id' } } })
+  submit(@Req() req: any, @Body() dto: SubmitApplicantDto) {
+    return this.applicants.submit(req.applicantId, req.draftTokenRecordId, dto.password);
   }
 }

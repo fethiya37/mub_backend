@@ -4,8 +4,7 @@ export const ROLES = {
   MUB_STAFF: 'MUB_STAFF',
   MUB_ADMIN: 'MUB_ADMIN',
   PARTNER_EMPLOYER: 'PARTNER_EMPLOYER',
-  FINANCE_OFFICER: 'FINANCE_OFFICER',
-  SYSTEM: 'SYSTEM'
+  FINANCE_OFFICER: 'FINANCE_OFFICER'
 } as const;
 
 export const PERMISSIONS = [
@@ -94,20 +93,9 @@ export const PERMISSIONS = [
   'COMPANY_EXPENSE_TYPE_MANAGE',
   'COMPANY_EXPENSE_MANAGE',
 
-  'NOTIFICATION_SEND',
-  'NOTIFICATION_TEMPLATE_MANAGE',
-
-  'COMMUNICATION_SEND',
-
   'REPORT_VIEW',
   'REPORT_ANALYTICS_VIEW',
 
-  'SYSTEM_CONFIG_MANAGE',
-  'WORKFLOW_CONFIG_MANAGE',
-
-  'SYSTEM_AUTOMATION_RUN',
-  'SYSTEM_REMINDER_SCHEDULE',
-  'SYSTEM_ANALYTICS_GENERATE'
 ] as const;
 
 export type RoleCode = (typeof ROLES)[keyof typeof ROLES];
@@ -154,8 +142,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'VISA_UPDATE',
     'VISA_SUBMIT',
 
-    'NOTIFICATION_SEND',
-    'COMMUNICATION_SEND',
+   
 
     'REPORT_VIEW',
   ],
@@ -174,9 +161,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
 
     'PLACEMENT_VIEW',
     'VISA_VIEW',
-
-    'COMMUNICATION_SEND',
-    'NOTIFICATION_SEND'
   ],
 
   [ROLES.APPLICANT]: [
@@ -196,8 +180,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'PLACEMENT_VIEW_SELF',
 
     'VISA_VIEW_SELF',
-
-    'NOTIFICATION_SEND'
   ],
 
   [ROLES.PARTNER_EMPLOYER]: [
@@ -220,9 +202,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
 
     'PLACEMENT_VIEW',
 
-    'COMMUNICATION_SEND',
-    'NOTIFICATION_SEND',
-
     'REPORT_VIEW'
   ],
 
@@ -231,13 +210,5 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICANT_EXPENSE_MANAGE',
     'COMPANY_EXPENSE_TYPE_MANAGE',
     'COMPANY_EXPENSE_MANAGE'
-  ],
-
-  [ROLES.SYSTEM]: [
-    'SYSTEM_AUTOMATION_RUN',
-    'SYSTEM_REMINDER_SCHEDULE',
-    'SYSTEM_ANALYTICS_GENERATE',
-    'NOTIFICATION_SEND',
-    'AUDIT_VIEW'
   ]
 } as const;

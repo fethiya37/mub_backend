@@ -18,6 +18,12 @@ export class LocalAgencyReviewService {
     private readonly auth: AuthService
   ) {}
 
+  private buildAgencyUserFullName(agency: any) {
+    const name = String(agency.name ?? '').trim();
+    if (name) return name;
+    return 'Local Agency';
+  }
+
   async list(status: string | undefined, page = 1, pageSize = 50) {
     return this.agencies.listByStatus(status, page, pageSize);
   }
@@ -54,6 +60,7 @@ export class LocalAgencyReviewService {
       if (!role) throw new BadRequestException('LOCAL_AGENCY role missing');
 
       const unusablePasswordHash = crypto.randomBytes(48).toString('base64url');
+      const fullName = this.buildAgencyUserFullName(current);
 
       const user = await tx.user.create({
         data: {
@@ -61,7 +68,9 @@ export class LocalAgencyReviewService {
           email: current.email!,
           passwordHash: unusablePasswordHash,
           isActive: true,
-          applicantVerified: false
+          applicantVerified: false,
+          status: 'APPROVED',
+          fullName
         }
       });
 
@@ -250,3 +259,4 @@ export class LocalAgencyReviewService {
     return { ok: true, agencyId: id };
   }
 }
+7

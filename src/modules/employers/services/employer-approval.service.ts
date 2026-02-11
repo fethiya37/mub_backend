@@ -12,6 +12,15 @@ export class EmployerApprovalService {
     private readonly auth: AuthService
   ) {}
 
+  private buildEmployerUserFullName(employer: any) {
+    const org = String(employer.organizationName ?? '').trim();
+    const owner = String(employer.ownerName ?? '').trim();
+    if (org && owner) return `${org} - ${owner}`;
+    if (org) return org;
+    if (owner) return owner;
+    return 'Employer';
+  }
+
   async approve(employerId: string, adminId: string, reason?: string) {
     const result = await this.prisma.$transaction(async (tx) => {
       const employer = await tx.employer.findUnique({ where: { id: employerId } });
@@ -32,6 +41,7 @@ export class EmployerApprovalService {
       if (!role) throw new BadRequestException('PARTNER_EMPLOYER role missing');
 
       const unusablePasswordHash = crypto.randomBytes(48).toString('base64url');
+      const fullName = this.buildEmployerUserFullName(employer);
 
       const user = await tx.user.create({
         data: {
@@ -39,7 +49,9 @@ export class EmployerApprovalService {
           email: employer.contactEmail,
           passwordHash: unusablePasswordHash,
           isActive: true,
-          applicantVerified: false
+          applicantVerified: false,
+          status: 'APPROVED',
+          fullName
         }
       });
 
@@ -89,6 +101,13 @@ export class EmployerApprovalService {
       if (employer.status !== 'PENDING') throw new BadRequestException('Only PENDING can be rejected');
 
       await tx.employer.update({ where: { id: employerId }, data: { status: 'REJECTED' } });
+
+      if (employer.userId) {
+        await tx.user.update({
+          where: { id: employer.userId },
+          data: { status: 'REJECTED' }
+        });
+      }
 
       await tx.employerApprovalLog.create({
         data: {
