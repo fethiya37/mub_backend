@@ -10,7 +10,6 @@ function mapUser(u: any) {
     fullName: u.fullName ?? null,
     status: u.status,
     isActive: u.isActive,
-    applicantVerified: u.applicantVerified,
     createdAt: u.createdAt,
     updatedAt: u.updatedAt,
     roles
@@ -32,14 +31,16 @@ export class UsersService {
     return mapUser(user);
   }
 
-  async update(id: string, input: {
-    email?: string | null;
-    phone?: string;
-    fullName?: string | null;
-    status?: 'PENDING' | 'APPROVED' | 'REJECTED';
-    isActive?: boolean;
-    applicantVerified?: boolean;
-  }) {
+  async update(
+    id: string,
+    input: {
+      email?: string | null;
+      phone?: string;
+      fullName?: string | null;
+      status?: 'PENDING' | 'APPROVED' | 'REJECTED';
+      isActive?: boolean;
+    }
+  ) {
     const existing = await this.users.findById(id);
     if (!existing) throw new NotFoundException('User not found');
 

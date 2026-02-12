@@ -8,11 +8,11 @@ export class AdminCreateUserDto {
   @MinLength(2)
   fullName?: string;
 
-  @ApiPropertyOptional()
+  @ApiPropertyOptional({ nullable: true })
   @IsOptional()
   @IsString()
   @MinLength(5)
-  email?: string;
+  email?: string | null;
 
   @ApiProperty()
   @IsString()
@@ -28,11 +28,6 @@ export class AdminCreateUserDto {
   @IsOptional()
   @IsBoolean()
   isActive?: boolean;
-
-  @ApiPropertyOptional({ default: false })
-  @IsOptional()
-  @IsBoolean()
-  applicantVerified?: boolean;
 
   @ApiPropertyOptional({ enum: ['PENDING', 'APPROVED', 'REJECTED'], default: 'PENDING' })
   @IsOptional()

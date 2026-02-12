@@ -25,11 +25,6 @@ export class AdminUpdateUserDto {
   @IsBoolean()
   isActive?: boolean;
 
-  @ApiPropertyOptional({ default: false })
-  @IsOptional()
-  @IsBoolean()
-  applicantVerified?: boolean;
-
   @ApiPropertyOptional({ enum: ['PENDING', 'APPROVED', 'REJECTED'] })
   @IsOptional()
   @IsIn(['PENDING', 'APPROVED', 'REJECTED'])

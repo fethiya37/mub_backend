@@ -1,11 +1,13 @@
 import { Body, Controller, Param, Put } from '@nestjs/common';
 import { ApiBearerAuth, ApiOperation, ApiResponse, ApiTags } from '@nestjs/swagger';
-import { IsArray, IsString, ArrayNotEmpty } from 'class-validator';
+import { ApiProperty } from '@nestjs/swagger';
+import { ArrayNotEmpty, IsArray, IsString } from 'class-validator';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { RbacService } from '../services/rbac.service';
 import { UsersService } from '../../users/services/users.service';
 
 export class ReplaceUserRolesDto {
+  @ApiProperty({ example: ['MUB_STAFF'] })
   @IsArray()
   @ArrayNotEmpty()
   @IsString({ each: true })

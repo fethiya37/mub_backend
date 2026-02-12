@@ -1,5 +1,6 @@
-import { BadRequestException, ConflictException, Injectable, UnauthorizedException } from '@nestjs/common';
+import { BadRequestException, ConflictException, Injectable, NotFoundException, UnauthorizedException } from '@nestjs/common';
 import crypto from 'crypto';
+import { randomToken, sha256 } from '../../../common/utils/crypto.util';
 import { LoginDto } from '../dto/login.dto';
 import { RefreshDto } from '../dto/refresh.dto';
 import { AdminCreateUserDto } from '../dto/admin-create-user.dto';
@@ -22,8 +23,10 @@ import { getAccountSetupTemplate } from '../../mail/templates/account-setup.temp
 import { getPasswordResetTemplate } from '../../mail/templates/password-reset.template';
 import { getEmailVerifyTemplate } from '../../mail/templates/email-verify.template';
 import { AccountActionTokensService } from './account-action-tokens.service';
+import { AdminResetApplicantPasswordDto } from '../dto/admin-reset-applicant-password.dto';
 
 type AdminCreatableRole = 'MUB_STAFF' | 'FINANCE_OFFICER' | 'SYSTEM';
+type AccountActionType = 'ACCOUNT_SETUP' | 'PASSWORD_RESET' | 'EMAIL_VERIFY';
 
 @Injectable()
 export class AuthService {
@@ -96,8 +99,7 @@ export class AuthService {
       refreshToken: `${jti}.${refreshToken}`,
       expiresInSeconds,
       roles,
-      permissions,
-      applicantVerified: user.applicantVerified
+      permissions
     };
   }
 
@@ -135,8 +137,7 @@ export class AuthService {
       refreshToken: `${newJti}.${newRefresh}`,
       expiresInSeconds,
       roles,
-      permissions,
-      applicantVerified: user.applicantVerified
+      permissions
     };
   }
 
@@ -164,7 +165,6 @@ export class AuthService {
       email: dto.email,
       passwordHash,
       isActive: true,
-      applicantVerified: true,
       fullName: dto.fullName ?? null,
       status: 'PENDING'
     });
@@ -182,6 +182,33 @@ export class AuthService {
     await this.sendAccountSetupEmail(user.id, dto.email, dto.fullName ?? dto.role);
 
     return { ok: true, userId: user.id };
+  }
+
+  async adminResetApplicantPassword(applicantUserId: string, dto: AdminResetApplicantPasswordDto, performedBy: string) {
+    const user = await this.users.findById(applicantUserId);
+    if (!user) throw new NotFoundException('User not found');
+
+    const roles = Array.isArray(user?.userRoles) ? user.userRoles.map((ur: any) => ur.role?.name).filter(Boolean) : [];
+    if (!roles.includes('APPLICANT')) throw new NotFoundException('Applicant not found');
+
+    const tempPassword = dto.password?.trim() || crypto.randomBytes(9).toString('base64url');
+    const passwordHash = await this.passwords.hash(tempPassword);
+
+    await this.users.update(applicantUserId, {
+      passwordHash,
+      tokenVersion: (user.tokenVersion ?? 0) + 1
+    });
+
+    await this.refreshRepo.revokeAllForUser(applicantUserId);
+
+    await this.audit.log({
+      performedBy,
+      action: 'ADMIN_RESET_APPLICANT_PASSWORD',
+      entityType: 'User',
+      entityId: applicantUserId
+    });
+
+    return { ok: true, tempPassword };
   }
 
   async forgotPassword(dto: ForgotPasswordDto) {
@@ -211,7 +238,7 @@ export class AuthService {
     if (!user) throw new BadRequestException('Invalid token');
 
     const newHash = await this.passwords.hash(dto.newPassword);
-    await this.users.update(row.userId, { passwordHash: newHash, tokenVersion: user.tokenVersion + 1 });
+    await this.users.update(row.userId, { passwordHash: newHash, tokenVersion: (user.tokenVersion ?? 0) + 1 });
 
     await this.refreshRepo.revokeAllForUser(row.userId);
     await this.audit.log({ performedBy: row.userId, action: 'AUTH_PASSWORD_RESET_SUCCESS' });
@@ -226,7 +253,7 @@ export class AuthService {
     if (!user) throw new BadRequestException('Invalid token');
 
     const passwordHash = await this.passwords.hash(dto.newPassword);
-    await this.users.update(user.id, { passwordHash, tokenVersion: user.tokenVersion + 1, isActive: true });
+    await this.users.update(user.id, { passwordHash, tokenVersion: (user.tokenVersion ?? 0) + 1, isActive: true });
 
     await this.refreshRepo.revokeAllForUser(user.id);
     await this.audit.log({ performedBy: user.id, action: 'ACCOUNT_SETUP_COMPLETE' });
@@ -278,7 +305,7 @@ export class AuthService {
     if (!ok) throw new UnauthorizedException('Invalid credentials');
 
     const passwordHash = await this.passwords.hash(dto.newPassword);
-    await this.users.update(userId, { passwordHash, tokenVersion: user.tokenVersion + 1 });
+    await this.users.update(userId, { passwordHash, tokenVersion: (user.tokenVersion ?? 0) + 1 });
 
     await this.refreshRepo.revokeAllForUser(userId);
     await this.audit.log({ performedBy: userId, action: 'AUTH_PASSWORD_CHANGED' });

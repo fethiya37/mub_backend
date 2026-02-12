@@ -1,4 +1,5 @@
 import { Module } from '@nestjs/common';
+import { PrismaService } from '../../database/prisma.service';
 import { UsersModule } from '../users/users.module';
 import { RbacService } from './services/rbac.service';
 import { PermissionEvaluatorService } from './services/permission-evaluator.service';
@@ -16,6 +17,7 @@ import { AdminUserRolesController } from './presentation/admin-user-roles.contro
   imports: [UsersModule],
   controllers: [AdminRolesController, AdminPermissionsController, AdminUserRolesController],
   providers: [
+    PrismaService,
     RbacService,
     PermissionEvaluatorService,
     { provide: RoleRepository, useClass: RolePrismaRepository },

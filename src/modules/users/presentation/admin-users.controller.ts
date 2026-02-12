@@ -37,8 +37,7 @@ export class AdminUsersController {
       phone: dto.phone,
       fullName: 'fullName' in dto ? (dto.fullName ?? null) : undefined,
       status: dto.status,
-      isActive: dto.isActive,
-      applicantVerified: dto.applicantVerified
+      isActive: dto.isActive
     });
   }
 

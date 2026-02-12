@@ -30,9 +30,13 @@ export class UserPrismaRepository extends UserRepository {
         phone: input.phone,
         passwordHash: input.passwordHash,
         isActive: input.isActive,
-        applicantVerified: input.applicantVerified,
         fullName: input.fullName ?? null,
-        status: (input.status as any) ?? 'PENDING'
+        status: (input.status as any) ?? 'PENDING',
+        tokenVersion: typeof input.tokenVersion === 'number' ? input.tokenVersion : 0,
+        failedLoginCount: typeof input.failedLoginCount === 'number' ? input.failedLoginCount : 0,
+        lockUntil: input.lockUntil ?? null,
+        emailVerified: typeof input.emailVerified === 'boolean' ? input.emailVerified : false,
+        emailVerifiedAt: input.emailVerifiedAt ?? null
       },
       include: { userRoles: { include: { role: true } } }
     });
@@ -46,7 +50,6 @@ export class UserPrismaRepository extends UserRepository {
     if ('passwordHash' in input) data.passwordHash = input.passwordHash;
 
     if ('isActive' in input) data.isActive = input.isActive;
-    if ('applicantVerified' in input) data.applicantVerified = input.applicantVerified;
 
     if ('fullName' in input) data.fullName = input.fullName ?? null;
     if ('status' in input) data.status = input.status as any;

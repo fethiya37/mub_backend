@@ -6,10 +6,17 @@ export type UserCreateInput = {
   passwordHash: string;
 
   isActive: boolean;
-  applicantVerified: boolean;
 
   fullName?: string | null;
   status?: UserStatus;
+
+  tokenVersion?: number;
+
+  failedLoginCount?: number;
+  lockUntil?: Date | null;
+
+  emailVerified?: boolean;
+  emailVerifiedAt?: Date | null;
 };
 
 export type UserUpdateInput = {
@@ -18,7 +25,6 @@ export type UserUpdateInput = {
   passwordHash?: string;
 
   isActive?: boolean;
-  applicantVerified?: boolean;
 
   fullName?: string | null;
   status?: UserStatus;
