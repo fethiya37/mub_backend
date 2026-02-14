@@ -67,15 +67,10 @@ export const PERMISSIONS = [
   'MATCHING_MANAGE',
 
   'APPLICATION_VIEW_SELF',
+  'APPLICATION_CREATE_SELF',
   'APPLICATION_VIEW',
   'APPLICATION_CREATE',
   'APPLICATION_MANAGE',
-
-  'PLACEMENT_VIEW_SELF',
-  'PLACEMENT_VIEW',
-  'PLACEMENT_ASSIGN',
-  'PLACEMENT_STAGE_UPDATE',
-  'PLACEMENT_OVERRIDE',
 
   'MEDICAL_VIEW',
   'MEDICAL_UPLOAD_RESULT',
@@ -128,9 +123,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICATION_CREATE',
     'APPLICATION_MANAGE',
 
-    'PLACEMENT_VIEW',
-    'PLACEMENT_ASSIGN',
-    'PLACEMENT_STAGE_UPDATE',
+  
 
     'MEDICAL_VIEW',
     'MEDICAL_UPLOAD_RESULT',
@@ -142,7 +135,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'VISA_UPDATE',
     'VISA_SUBMIT',
 
-   
+
 
     'REPORT_VIEW',
   ],
@@ -159,7 +152,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
 
     'SKILL_VIEW',
 
-    'PLACEMENT_VIEW',
     'VISA_VIEW',
   ],
 
@@ -176,8 +168,9 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'JOB_VIEW',
 
     'APPLICATION_VIEW_SELF',
+    'APPLICATION_CREATE_SELF',
 
-    'PLACEMENT_VIEW_SELF',
+
 
     'VISA_VIEW_SELF',
   ],
@@ -199,8 +192,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
 
     'APPLICATION_VIEW',
     'APPLICATION_MANAGE',
-
-    'PLACEMENT_VIEW',
 
     'REPORT_VIEW'
   ],

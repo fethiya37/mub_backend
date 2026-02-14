@@ -49,7 +49,7 @@ function cvDiskStorage() {
 export class ApplicantApplicationsController {
   constructor(private readonly applications: JobApplicationsService) {}
 
-  @RequirePermissions('APPLICATION_CREATE')
+  @RequirePermissions('APPLICATION_CREATE_SELF')
   @Post()
   @ApiOperation({ summary: 'Apply (or reapply if REJECTED/WITHDRAWN) to a job' })
   @ApiConsumes('multipart/form-data')
