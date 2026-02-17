@@ -18,6 +18,7 @@ import { LocalAgenciesModule } from './modules/local-agencies/local-agencies.mod
 import { VisaModule } from './modules/visa/visa.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { JobApplicationsModule } from './modules/job-applications/job-applications.module';
+import { ReportsModule } from './modules/reports/reports.module';
 
 @Module({
   imports: [
@@ -41,7 +42,8 @@ import { JobApplicationsModule } from './modules/job-applications/job-applicatio
     VisaModule,
     ExpensesModule,
     JobApplicationsModule,
-    LocalAgenciesModule
+    LocalAgenciesModule,
+    ReportsModule
   ],
   providers: [...appGuards]
 })

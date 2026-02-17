@@ -816,3 +816,5 @@ model ApplicantExpense {
   @@index([expenseDate])
   @@index([createdBy])
 }
+
+
