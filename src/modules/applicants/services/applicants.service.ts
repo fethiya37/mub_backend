@@ -75,11 +75,16 @@ export class ApplicantsService {
     const oldDocs = this.ensureArray<any>(existing?.documents);
     const oldEmergency = this.ensureArray<any>(existing?.emergencyContacts);
 
-    const getOldDocUrl = (t: string) => (oldDocs.find((d) => String(d?.documentType) === t)?.fileUrl ?? null) as string | null;
+    const getOldDocUrl = (t: string) =>
+      (oldDocs.find((d) => String(d?.documentType) === t)?.fileUrl ?? null) as string | null;
+
     const getNewDocUrl = (t: string) =>
-      (this.ensureArray<any>(nextDto?.documents).find((d) => String(d?.documentType) === t)?.fileUrl ?? null) as string | null;
+      (this.ensureArray<any>(nextDto?.documents).find((d) => String(d?.documentType) === t)?.fileUrl ?? null) as
+        | string
+        | null;
 
     const getOldEmergencyUrl = (i: number) => (oldEmergency?.[i]?.idFileUrl ?? null) as string | null;
+
     const getNewEmergencyUrl = (i: number) =>
       (this.ensureArray<any>(nextDto?.emergencyContacts)?.[i]?.idFileUrl ?? null) as string | null;
 
@@ -157,7 +162,9 @@ export class ApplicantsService {
             willingToLearn: s.willingToLearn ?? false
           }))
         : undefined,
-      qualifications: dto.qualifications ? dto.qualifications.map((q: any) => ({ qualification: q.qualification })) : undefined,
+      qualifications: dto.qualifications
+        ? dto.qualifications.map((q: any) => ({ qualification: q.qualification }))
+        : undefined,
       workExperiences: dto.workExperiences
         ? dto.workExperiences.map((w: any) => ({
             jobTitle: w.jobTitle,
@@ -167,6 +174,30 @@ export class ApplicantsService {
         : undefined,
       documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
     };
+  }
+
+  private missingSubmitFields(profile: any) {
+    const missing: string[] = [];
+    const req = (key: string, ok: any) => {
+      if (!ok) missing.push(key);
+    };
+
+    req('firstName', profile.firstName);
+    req('lastName', profile.lastName);
+    req('gender', profile.gender);
+    req('dateOfBirth', profile.dateOfBirth);
+    req('placeOfBirth', profile.placeOfBirth);
+    req('nationality', profile.nationality);
+    req('maritalStatus', profile.maritalStatus);
+    req('occupation', profile.occupation);
+    req('passportNumber', profile.passportNumber);
+    req('passportPlace', profile.passportPlace);
+    req('passportIssueDate', profile.passportIssueDate);
+    req('passportExpiry', profile.passportExpiry);
+    req('laborId', profile.laborId);
+    req('phone', profile.phone);
+
+    return missing;
   }
 
   private async ensureApplicantUserOnSubmit(applicantId: string, password: string) {
@@ -291,7 +322,9 @@ export class ApplicantsService {
 
       passportNumber: dtoWithFiles.passportNumber ?? profile.passportNumber,
       passportPlace: dtoWithFiles.passportPlace ?? profile.passportPlace,
-      passportIssueDate: dtoWithFiles.passportIssueDate ? new Date(dtoWithFiles.passportIssueDate) : profile.passportIssueDate,
+      passportIssueDate: dtoWithFiles.passportIssueDate
+        ? new Date(dtoWithFiles.passportIssueDate)
+        : profile.passportIssueDate,
       passportExpiry: dtoWithFiles.passportExpiry ? new Date(dtoWithFiles.passportExpiry) : profile.passportExpiry,
 
       address: dtoWithFiles.address ?? profile.address,
@@ -388,31 +421,26 @@ export class ApplicantsService {
     if (!profile) throw new BadRequestException('Applicant not found');
     this.status.ensureCanSubmit(profile.profileStatus);
 
-    const missingProfile =
-      !profile.firstName ||
-      !profile.lastName ||
-      !profile.gender ||
-      !profile.dateOfBirth ||
-      !profile.placeOfBirth ||
-      !profile.nationality ||
-      !profile.maritalStatus ||
-      !profile.occupation ||
-      !profile.passportNumber ||
-      !profile.passportPlace ||
-      !profile.passportIssueDate ||
-      !profile.passportExpiry ||
-      !profile.laborId ||
-      !profile.phone;
-
-    if (missingProfile) throw new BadRequestException('Missing required profile fields');
+    const missingFields = this.missingSubmitFields(profile);
+    if (missingFields.length) {
+      throw new BadRequestException({
+        message: 'Missing required profile fields',
+        missingFields
+      });
+    }
 
     this.draftTokens.parseLaborId(profile.gender ?? null, profile.laborId ?? null);
     this.draftTokens.ensurePassportExpiry(profile.passportExpiry ?? null);
 
     const docTypes = new Set((profile.documents ?? []).map((d: any) => d.documentType));
     const requiredDocs = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE'];
-    const missingDocs = requiredDocs.filter((t) => !docTypes.has(t));
-    if (missingDocs.length) throw new BadRequestException(`Missing required documents: ${missingDocs.join(', ')}`);
+    const missingDocuments = requiredDocs.filter((t) => !docTypes.has(t));
+    if (missingDocuments.length) {
+      throw new BadRequestException({
+        message: 'Missing required documents',
+        missingDocuments
+      });
+    }
 
     const userId = await this.ensureApplicantUserOnSubmit(applicantId, password);
 
@@ -433,30 +461,26 @@ export class ApplicantsService {
 
     this.status.ensureCanSubmit(profile.profileStatus);
 
-    const missingProfile =
-      !profile.firstName ||
-      !profile.lastName ||
-      !profile.gender ||
-      !profile.dateOfBirth ||
-      !profile.placeOfBirth ||
-      !profile.nationality ||
-      !profile.maritalStatus ||
-      !profile.passportNumber ||
-      !profile.passportPlace ||
-      !profile.passportIssueDate ||
-      !profile.passportExpiry ||
-      !profile.laborId ||
-      !profile.phone;
-
-    if (missingProfile) throw new BadRequestException('Missing required profile fields');
+    const missingFields = this.missingSubmitFields(profile);
+    if (missingFields.length) {
+      throw new BadRequestException({
+        message: 'Missing required profile fields',
+        missingFields
+      });
+    }
 
     this.draftTokens.parseLaborId(profile.gender ?? null, profile.laborId ?? null);
     this.draftTokens.ensurePassportExpiry(profile.passportExpiry ?? null);
 
     const docTypes = new Set((profile.documents ?? []).map((d: any) => d.documentType));
     const requiredDocs = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE'];
-    const missingDocs = requiredDocs.filter((t) => !docTypes.has(t));
-    if (missingDocs.length) throw new BadRequestException(`Missing required documents: ${missingDocs.join(', ')}`);
+    const missingDocuments = requiredDocs.filter((t) => !docTypes.has(t));
+    if (missingDocuments.length) {
+      throw new BadRequestException({
+        message: 'Missing required documents',
+        missingDocuments
+      });
+    }
 
     const userId = await this.ensureApplicantUserOnSubmit(applicantId, password);
 

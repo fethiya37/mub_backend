@@ -32,55 +32,47 @@ export class DraftUpsertApplicantDto {
   @IsEmail()
   email?: string;
 
-  @ApiPropertyOptional({ example: 'Fetiya' })
-  @IsOptional()
+  @ApiProperty({ example: 'Fetiya' })
   @IsString()
-  firstName?: string;
+  firstName!: string;
 
   @ApiPropertyOptional({ example: 'Seid' })
   @IsOptional()
   @IsString()
   middleName?: string;
 
-  @ApiPropertyOptional({ example: 'Seid' })
-  @IsOptional()
+  @ApiProperty({ example: 'Seid' })
   @IsString()
-  lastName?: string;
+  lastName!: string;
 
-  @ApiPropertyOptional({ example: 'FEMALE', enum: Genders })
-  @IsOptional()
+  @ApiProperty({ example: 'FEMALE', enum: Genders })
   @IsIn(Genders)
-  gender?: Gender;
+  gender!: Gender;
 
-  @ApiPropertyOptional({ example: '1998-01-15' })
-  @IsOptional()
+  @ApiProperty({ example: '1998-01-15' })
   @IsDateString()
-  dateOfBirth?: string;
+  dateOfBirth!: string;
 
-  @ApiPropertyOptional({ example: 'Addis Ababa' })
-  @IsOptional()
+  @ApiProperty({ example: 'Addis Ababa' })
   @IsString()
-  placeOfBirth?: string;
+  placeOfBirth!: string;
 
-  @ApiPropertyOptional({ example: 'Ethiopian' })
-  @IsOptional()
+  @ApiProperty({ example: 'Ethiopian' })
   @IsString()
-  nationality?: string;
+  nationality!: string;
 
   @ApiPropertyOptional({ example: 'Islam' })
   @IsOptional()
   @IsString()
   religion?: string;
 
-  @ApiPropertyOptional({ example: 'SINGLE' })
-  @IsOptional()
+  @ApiProperty({ example: 'SINGLE' })
   @IsString()
-  maritalStatus?: string;
+  maritalStatus!: string;
 
-  @ApiPropertyOptional({ example: 'Electrician' })
-  @IsOptional()
+  @ApiProperty({ example: 'Electrician' })
   @IsString()
-  occupation?: string;
+  occupation!: string;
 
   @ApiPropertyOptional({ example: 0 })
   @IsOptional()
@@ -100,35 +92,30 @@ export class DraftUpsertApplicantDto {
   @IsNumber()
   weight?: number;
 
-  @ApiPropertyOptional({ example: 'EF12345678' })
-  @IsOptional()
+  @ApiProperty({ example: 'EF12345678' })
   @IsString()
-  laborId?: string;
+  laborId!: string;
 
   @ApiPropertyOptional({ example: 'Bole, Addis Ababa, Ethiopia' })
   @IsOptional()
   @IsString()
   address?: string;
 
-  @ApiPropertyOptional({ example: 'P12345678' })
-  @IsOptional()
+  @ApiProperty({ example: 'P12345678' })
   @IsString()
-  passportNumber?: string;
+  passportNumber!: string;
 
-  @ApiPropertyOptional({ example: 'Addis Ababa' })
-  @IsOptional()
+  @ApiProperty({ example: 'Addis Ababa' })
   @IsString()
-  passportPlace?: string;
+  passportPlace!: string;
 
-  @ApiPropertyOptional({ example: '2020-01-01' })
-  @IsOptional()
+  @ApiProperty({ example: '2020-01-01' })
   @IsDateString()
-  passportIssueDate?: string;
+  passportIssueDate!: string;
 
-  @ApiPropertyOptional({ example: '2030-12-31' })
-  @IsOptional()
+  @ApiProperty({ example: '2030-12-31' })
   @IsDateString()
-  passportExpiry?: string;
+  passportExpiry!: string;
 
   @ApiPropertyOptional({ type: 'string', format: 'binary' })
   @IsOptional()

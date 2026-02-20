@@ -1,9 +1,6 @@
-import { Injectable } from '@nestjs/common';
+import { ConflictException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import {
-  ApplicantProfileRepository,
-  ApplicantProfileUpsertInput
-} from '../repositories/applicant-profile.repository';
+import { ApplicantProfileRepository, ApplicantProfileUpsertInput } from '../repositories/applicant-profile.repository';
 
 @Injectable()
 export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository {
@@ -42,12 +39,7 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
     });
   }
 
-  async listByStatus(
-    status: string | undefined,
-    createdBy: string | undefined,
-    page: number,
-    pageSize: number
-  ) {
+  async listByStatus(status: string | undefined, createdBy: string | undefined, page: number, pageSize: number) {
     const skip = (page - 1) * pageSize;
     const where: any = {};
     if (status) where.profileStatus = status;
@@ -70,12 +62,52 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
     return this.listByStatus(status, createdBy, page, pageSize);
   }
 
+  private async findExistingForUpsert(tx: PrismaService, input: ApplicantProfileUpsertInput) {
+    const phone = (input.phone ?? '').trim();
+    const laborId = (input.laborId ?? '').trim();
+    const passportNumber = (input.passportNumber ?? '').trim();
+
+    if (!phone && !laborId && !passportNumber) return null;
+
+    return tx.applicantProfile.findFirst({
+      where: {
+        OR: [
+          phone ? { phone } : undefined,
+          laborId ? { laborId } : undefined,
+          passportNumber ? { passportNumber } : undefined
+        ].filter(Boolean) as any
+      },
+      include: this.includeAll()
+    });
+  }
+
+  private ensureNoIdentityCollision(existing: any, input: ApplicantProfileUpsertInput) {
+    const incomingPhone = (input.phone ?? '').trim();
+    const incomingLaborId = (input.laborId ?? '').trim();
+    const incomingPassportNumber = (input.passportNumber ?? '').trim();
+
+    const existingPhone = (existing?.phone ?? '').trim();
+    const existingLaborId = (existing?.laborId ?? '').trim();
+    const existingPassportNumber = (existing?.passportNumber ?? '').trim();
+
+    if (incomingLaborId && existingLaborId && incomingLaborId === existingLaborId) return;
+    if (incomingPassportNumber && existingPassportNumber && incomingPassportNumber === existingPassportNumber) return;
+    if (incomingPhone && existingPhone && incomingPhone === existingPhone) return;
+
+    const hasIncoming =
+      Boolean(incomingPhone) || Boolean(incomingLaborId) || Boolean(incomingPassportNumber);
+    const hasExisting =
+      Boolean(existingPhone) || Boolean(existingLaborId) || Boolean(existingPassportNumber);
+
+    if (hasIncoming && hasExisting) {
+      throw new ConflictException('Applicant identity collision: phone/laborId/passportNumber belongs to another applicant');
+    }
+  }
+
   async upsertDraft(input: ApplicantProfileUpsertInput) {
     return this.prisma.$transaction(async (tx) => {
-      const existing = await tx.applicantProfile.findUnique({
-        where: { phone: input.phone },
-        include: this.includeAll()
-      });
+      const existing = await this.findExistingForUpsert(tx as any, input);
+      if (existing) this.ensureNoIdentityCollision(existing, input);
 
       const baseData: any = {
         email: input.email ?? undefined,
@@ -110,12 +142,16 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
         createdBy: input.createdBy ?? undefined
       };
 
-      const profile = existing
-        ? await tx.applicantProfile.update({
-            where: { applicantId: existing.applicantId },
-            data: baseData
-          })
-        : await tx.applicantProfile.create({
+      let profile: any;
+
+      if (existing) {
+        profile = await tx.applicantProfile.update({
+          where: { applicantId: existing.applicantId },
+          data: baseData
+        });
+      } else {
+        try {
+          profile = await tx.applicantProfile.create({
             data: {
               phone: input.phone,
               email: input.email ?? undefined,
@@ -153,6 +189,17 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
               profileStatus: 'DRAFT'
             }
           });
+        } catch (e: any) {
+          if (e?.code === 'P2002') {
+            const target = Array.isArray(e?.meta?.target) ? e.meta.target.join(', ') : String(e?.meta?.target ?? '');
+            if (target.includes('laborId')) throw new ConflictException('laborId already exists');
+            if (target.includes('passportNumber')) throw new ConflictException('passportNumber already exists');
+            if (target.includes('phone')) throw new ConflictException('phone already exists');
+            throw new ConflictException('Unique constraint violation');
+          }
+          throw e;
+        }
+      }
 
       const applicantId = profile.applicantId;
 
