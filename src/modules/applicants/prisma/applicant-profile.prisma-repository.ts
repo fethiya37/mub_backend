@@ -1,6 +1,9 @@
 import { Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { ApplicantProfileRepository, ApplicantProfileUpsertInput } from '../repositories/applicant-profile.repository';
+import {
+  ApplicantProfileRepository,
+  ApplicantProfileUpsertInput
+} from '../repositories/applicant-profile.repository';
 
 @Injectable()
 export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository {
@@ -39,7 +42,12 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
     });
   }
 
-  async listByStatus(status: string | undefined, createdBy: string | undefined, page: number, pageSize: number) {
+  async listByStatus(
+    status: string | undefined,
+    createdBy: string | undefined,
+    page: number,
+    pageSize: number
+  ) {
     const skip = (page - 1) * pageSize;
     const where: any = {};
     if (status) where.profileStatus = status;
@@ -104,48 +112,47 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
 
       const profile = existing
         ? await tx.applicantProfile.update({
-          where: { applicantId: existing.applicantId },
-          data: baseData
-        })
+            where: { applicantId: existing.applicantId },
+            data: baseData
+          })
         : await tx.applicantProfile.create({
-          data: {
-            phone: input.phone,
+            data: {
+              phone: input.phone,
+              email: input.email ?? undefined,
 
-            email: input.email ?? undefined,
+              applicationNumber: input.applicationNumber ?? this.generateApplicationNumber(),
 
-            applicationNumber: input.applicationNumber ?? this.generateApplicationNumber(),
+              firstName: input.firstName ?? null,
+              middleName: input.middleName ?? null,
+              lastName: input.lastName ?? null,
+              gender: input.gender ?? null,
 
-            firstName: input.firstName ?? null,
-            middleName: input.middleName ?? null,
-            lastName: input.lastName ?? null,
-            gender: input.gender ?? null,
+              dateOfBirth: input.dateOfBirth ?? null,
+              placeOfBirth: input.placeOfBirth ?? null,
+              nationality: input.nationality ?? null,
+              religion: input.religion ?? null,
+              maritalStatus: input.maritalStatus ?? null,
+              numberOfChildren: input.numberOfChildren ?? null,
 
-            dateOfBirth: input.dateOfBirth ?? null,
-            placeOfBirth: input.placeOfBirth ?? null,
-            nationality: input.nationality ?? null,
-            religion: input.religion ?? null,
-            maritalStatus: input.maritalStatus ?? null,
-            numberOfChildren: input.numberOfChildren ?? null,
+              occupation: input.occupation ?? null,
 
-            occupation: input.occupation ?? null,
+              height: input.height ?? null,
+              weight: input.weight ?? null,
 
-            height: input.height ?? null,
-            weight: input.weight ?? null,
+              laborId: input.laborId ?? null,
 
-            laborId: input.laborId ?? null,
+              passportNumber: input.passportNumber ?? null,
+              passportPlace: input.passportPlace ?? null,
+              passportIssueDate: input.passportIssueDate ?? null,
+              passportExpiry: input.passportExpiry ?? null,
 
-            passportNumber: input.passportNumber ?? null,
-            passportPlace: input.passportPlace ?? null,
-            passportIssueDate: input.passportIssueDate ?? null,
-            passportExpiry: input.passportExpiry ?? null,
+              address: input.address ?? null,
 
-            address: input.address ?? null,
-
-            registrationSource: input.registrationSource ?? 'SELF',
-            createdBy: input.createdBy ?? null,
-            profileStatus: 'DRAFT'
-          }
-        });
+              registrationSource: input.registrationSource ?? 'SELF',
+              createdBy: input.createdBy ?? null,
+              profileStatus: 'DRAFT'
+            }
+          });
 
       const applicantId = profile.applicantId;
 
@@ -248,13 +255,18 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
 
   async updateVerified(applicantId: string, patch: any) {
     return this.prisma.$transaction(async (tx) => {
-      await tx.applicantProfile.update({ where: { applicantId }, data: patch });
+      const { emergencyContacts, skills, qualifications, workExperiences, documents, ...scalars } = patch ?? {};
 
-      if (patch.emergencyContacts) {
+      await tx.applicantProfile.update({
+        where: { applicantId },
+        data: scalars
+      });
+
+      if (emergencyContacts) {
         await tx.emergencyContact.deleteMany({ where: { applicantId } });
-        if (patch.emergencyContacts.length) {
+        if (emergencyContacts.length) {
           await tx.emergencyContact.createMany({
-            data: patch.emergencyContacts.map((c: any) => ({
+            data: emergencyContacts.map((c: any) => ({
               applicantId,
               fullName: c.fullName,
               phone: c.phone,
@@ -266,11 +278,11 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
         }
       }
 
-      if (patch.skills) {
+      if (skills) {
         await tx.applicantSkill.deleteMany({ where: { applicantId } });
-        if (patch.skills.length) {
+        if (skills.length) {
           await tx.applicantSkill.createMany({
-            data: patch.skills.map((s: any) => ({
+            data: skills.map((s: any) => ({
               applicantId,
               skillId: s.skillId,
               hasSkill: s.hasSkill ?? true,
@@ -280,11 +292,11 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
         }
       }
 
-      if (patch.qualifications) {
+      if (qualifications) {
         await tx.applicantQualification.deleteMany({ where: { applicantId } });
-        if (patch.qualifications.length) {
+        if (qualifications.length) {
           await tx.applicantQualification.createMany({
-            data: patch.qualifications.map((q: any) => ({
+            data: qualifications.map((q: any) => ({
               applicantId,
               qualification: q.qualification
             }))
@@ -292,11 +304,11 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
         }
       }
 
-      if (patch.workExperiences) {
+      if (workExperiences) {
         await tx.applicantWorkExperience.deleteMany({ where: { applicantId } });
-        if (patch.workExperiences.length) {
+        if (workExperiences.length) {
           await tx.applicantWorkExperience.createMany({
-            data: patch.workExperiences.map((w: any) => ({
+            data: workExperiences.map((w: any) => ({
               applicantId,
               jobTitle: w.jobTitle,
               country: w.country ?? null,
@@ -306,11 +318,11 @@ export class ApplicantProfilePrismaRepository extends ApplicantProfileRepository
         }
       }
 
-      if (patch.documents) {
+      if (documents) {
         await tx.applicantDocument.deleteMany({ where: { applicantId } });
-        if (patch.documents.length) {
+        if (documents.length) {
           await tx.applicantDocument.createMany({
-            data: patch.documents.map((d: any) => ({
+            data: documents.map((d: any) => ({
               applicantId,
               documentType: d.documentType,
               fileUrl: d.fileUrl,

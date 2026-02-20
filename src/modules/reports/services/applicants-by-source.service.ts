@@ -1,12 +1,13 @@
 import { BadRequestException, Injectable } from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
-import { ApplicantsBySourceQueryDto } from '../dto/applicants-by-source.query.dto';
+import {
+  ApplicantsBySourceQueryDto,
+  ApplicantsBySourceValues,
+  type ApplicantsBySourceValue
+} from '../dto/applicants-by-source.query.dto';
 import ExcelJS from 'exceljs';
 import PDFDocument from 'pdfkit';
 import type { Response } from 'express';
-
-type SourceParam = 'agency' | 'self' | 'mub-staff';
-type RegistrationSource = 'AGENCY' | 'SELF' | 'MUB_STAFF';
 
 type ApplicantRow = {
   applicantId: string;
@@ -33,16 +34,13 @@ type CreatorUser = {
 export class ApplicantsBySourceService {
   constructor(private readonly prisma: PrismaService) {}
 
-  private parseSourceParam(source: string): SourceParam {
-    const s = String(source || '').trim().toLowerCase();
-    if (s === 'agency' || s === 'self' || s === 'mub-staff') return s;
-    throw new BadRequestException('Invalid source. Allowed: agency | self | mub-staff');
-  }
+  private parseSource(q: ApplicantsBySourceQueryDto): ApplicantsBySourceValue {
+    // Default if not provided (choose what you want)
+    const src = (q.source ?? 'SELF') as string;
 
-  private toRegistrationSource(source: SourceParam): RegistrationSource {
-    if (source === 'agency') return 'AGENCY';
-    if (source === 'self') return 'SELF';
-    return 'MUB_STAFF';
+    if (ApplicantsBySourceValues.includes(src as any)) return src as ApplicantsBySourceValue;
+
+    throw new BadRequestException('Invalid source. Allowed: SELF | AGENCY | MUB_STAFF');
   }
 
   private buildCreatedAtWhere(q: ApplicantsBySourceQueryDto) {
@@ -60,8 +58,8 @@ export class ApplicantsBySourceService {
     return where;
   }
 
-  private buildWhere(sourceParam: string, q: ApplicantsBySourceQueryDto) {
-    const src = this.toRegistrationSource(this.parseSourceParam(sourceParam));
+  private buildWhere(q: ApplicantsBySourceQueryDto) {
+    const src = this.parseSource(q);
     const createdAt = this.buildCreatedAtWhere(q);
 
     const where: any = { registrationSource: src };
@@ -91,16 +89,15 @@ export class ApplicantsBySourceService {
     return [row.firstName, row.middleName, row.lastName].filter(Boolean).join(' ').trim();
   }
 
-  async count(sourceParam: string, q: ApplicantsBySourceQueryDto) {
-    const source = this.parseSourceParam(sourceParam);
-    const where = this.buildWhere(source, q);
+  async count(q: ApplicantsBySourceQueryDto) {
+    const src = this.parseSource(q);
+    const where = this.buildWhere(q);
     const total = await this.prisma.applicantProfile.count({ where });
-    return { source: this.toRegistrationSource(source), total };
+    return { source: src, total };
   }
 
-  async creators(sourceParam: string, q: ApplicantsBySourceQueryDto) {
-    const source = this.parseSourceParam(sourceParam);
-    const src = this.toRegistrationSource(source);
+  async creators(q: ApplicantsBySourceQueryDto) {
+    const src = this.parseSource(q);
 
     if (src === 'SELF') {
       const createdAt = this.buildCreatedAtWhere(q);
@@ -130,9 +127,7 @@ export class ApplicantsBySourceService {
         return {
           createdBy: g.createdBy as string,
           total: g._count.applicantId,
-          createdByUser: u
-            ? { id: u.id, fullName: u.fullName, phone: u.phone, email: u.email }
-            : null
+          createdByUser: u ? { id: u.id, fullName: u.fullName, phone: u.phone, email: u.email } : null
         };
       })
       .sort((a, b) => b.total - a.total);
@@ -140,18 +135,16 @@ export class ApplicantsBySourceService {
     return { source: src, creators };
   }
 
-  async list(sourceParam: string, q: ApplicantsBySourceQueryDto) {
-    const source = this.parseSourceParam(sourceParam);
-
+  async list(q: ApplicantsBySourceQueryDto) {
+    const src = this.parseSource(q);
     const page = q.page ? Number(q.page) : 1;
     const pageSize = q.pageSize ? Number(q.pageSize) : 50;
 
     const safePage = Number.isFinite(page) && page > 0 ? page : 1;
     const safePageSize = Number.isFinite(pageSize) && pageSize > 0 && pageSize <= 500 ? pageSize : 50;
-
     const skip = (safePage - 1) * safePageSize;
 
-    const where = this.buildWhere(source, q);
+    const where = this.buildWhere(q);
 
     const [items, total] = await this.prisma.$transaction([
       this.prisma.applicantProfile.findMany({
@@ -188,7 +181,7 @@ export class ApplicantsBySourceService {
     });
 
     return {
-      source: this.toRegistrationSource(source),
+      source: src,
       createdBy: q.createdBy ?? null,
       dateFrom: q.dateFrom ?? null,
       dateTo: q.dateTo ?? null,
@@ -237,14 +230,14 @@ export class ApplicantsBySourceService {
     return { rows: rows as ApplicantRow[], nextCursor };
   }
 
-  async streamExcel(sourceParam: string, q: ApplicantsBySourceQueryDto, res: Response) {
-    const source = this.parseSourceParam(sourceParam);
-    const where = this.buildWhere(source, q);
+  async streamExcel(q: ApplicantsBySourceQueryDto, res: Response) {
+    const src = this.parseSource(q);
+    const where = this.buildWhere(q);
 
     res.setHeader('Content-Type', 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="applicants-by-source-${this.toRegistrationSource(source).toLowerCase()}-${Date.now()}.xlsx"`
+      `attachment; filename="applicants-by-source-${src.toLowerCase()}-${Date.now()}.xlsx"`
     );
 
     const wb = new ExcelJS.stream.xlsx.WorkbookWriter({ stream: res });
@@ -301,20 +294,20 @@ export class ApplicantsBySourceService {
     await wb.commit();
   }
 
-  async streamPdf(sourceParam: string, q: ApplicantsBySourceQueryDto, res: Response) {
-    const source = this.parseSourceParam(sourceParam);
-    const where = this.buildWhere(source, q);
+  async streamPdf(q: ApplicantsBySourceQueryDto, res: Response) {
+    const src = this.parseSource(q);
+    const where = this.buildWhere(q);
 
     res.setHeader('Content-Type', 'application/pdf');
     res.setHeader(
       'Content-Disposition',
-      `attachment; filename="applicants-by-source-${this.toRegistrationSource(source).toLowerCase()}-${Date.now()}.pdf"`
+      `attachment; filename="applicants-by-source-${src.toLowerCase()}-${Date.now()}.pdf"`
     );
 
     const doc = new PDFDocument({ size: 'A4', margin: 36 });
     doc.pipe(res);
 
-    const title = `Applicants by Source: ${this.toRegistrationSource(source)}`;
+    const title = `Applicants by Source: ${src}`;
     const subtitle = `Range: ${q.dateFrom ?? 'Any'} → ${q.dateTo ?? 'Any'}   CreatedBy: ${q.createdBy ?? 'Any'}`;
 
     doc.fontSize(16).text(title);
@@ -346,9 +339,7 @@ export class ApplicantsBySourceService {
       cursor = nextCursor ?? undefined;
       if (!cursor) break;
 
-      if (doc.y > 760) {
-        doc.addPage();
-      }
+      if (doc.y > 760) doc.addPage();
     }
 
     doc.end();
