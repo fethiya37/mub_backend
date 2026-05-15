@@ -19,15 +19,15 @@ import { VisaModule } from './modules/visa/visa.module';
 import { ExpensesModule } from './modules/expenses/expenses.module';
 import { JobApplicationsModule } from './modules/job-applications/job-applications.module';
 import { ReportsModule } from './modules/reports/reports.module';
+import { NotificationsModule } from './modules/notifications/notifications.module';
 
 @Module({
   imports: [
     ConfigModule.forRoot({
       isGlobal: true,
       load: [configuration],
-      validate: envValidation
+      validate: envValidation,
     }),
-
 
     ThrottlerModule.forRoot(throttleConfig()),
     PrismaModule,
@@ -43,8 +43,9 @@ import { ReportsModule } from './modules/reports/reports.module';
     ExpensesModule,
     JobApplicationsModule,
     LocalAgenciesModule,
-    ReportsModule
+    ReportsModule,
+    NotificationsModule,
   ],
-  providers: [...appGuards]
+  providers: [...appGuards],
 })
-export class AppModule { }
+export class AppModule {}

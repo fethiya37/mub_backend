@@ -3,7 +3,7 @@ import {
   ConflictException,
   ForbiddenException,
   Injectable,
-  NotFoundException
+  NotFoundException,
 } from '@nestjs/common';
 import { ApplicantProfileRepository } from '../repositories/applicant-profile.repository';
 import { ApplicantStatusService } from './applicant-status.service';
@@ -20,7 +20,7 @@ export class ApplicantsService {
     private readonly prisma: PrismaService,
     private readonly profiles: ApplicantProfileRepository,
     private readonly status: ApplicantStatusService,
-    private readonly draftTokens: ApplicantDraftTokenService
+    private readonly draftTokens: ApplicantDraftTokenService,
   ) {}
 
   private ensureArray<T>(v: any): T[] {
@@ -41,16 +41,22 @@ export class ApplicantsService {
     const next = { ...dto };
 
     const docs = this.ensureArray<any>(next.documents).map((d) => ({ ...d }));
-    const emergency = this.ensureArray<any>(next.emergencyContacts).map((c) => ({ ...c }));
+    const emergency = this.ensureArray<any>(next.emergencyContacts).map(
+      (c) => ({ ...c }),
+    );
 
     for (const key of Object.keys(fileUrls || {})) {
       const url = fileUrls[key];
       if (!url) continue;
 
       if (key === 'passportFile') this.upsertDoc(docs, 'PASSPORT', url);
-      else if (key === 'personalPhoto') this.upsertDoc(docs, 'PERSONAL_PHOTO', url);
-      else if (key === 'cocCertificateFile') this.upsertDoc(docs, 'COC_CERTIFICATE', url);
-      else if (key === 'applicantIdFile') this.upsertDoc(docs, 'APPLICANT_ID', url);
+      else if (key === 'personalPhoto')
+        this.upsertDoc(docs, 'PERSONAL_PHOTO', url);
+      else if (key === 'cocCertificateFile')
+        this.upsertDoc(docs, 'COC_CERTIFICATE', url);
+      else if (key === 'applicantIdFile')
+        this.upsertDoc(docs, 'APPLICANT_ID', url);
+      else if (key === 'document_CV') this.upsertDoc(docs, 'CV', url);
       else if (key.startsWith('document_')) {
         const t = key.slice('document_'.length);
         if (t) this.upsertDoc(docs, t, url);
@@ -70,23 +76,31 @@ export class ApplicantsService {
     return next;
   }
 
-  private collectOldPathsToDelete(existing: any, nextDto: any, fileUrls: FileUrlsMap) {
+  private collectOldPathsToDelete(
+    existing: any,
+    nextDto: any,
+    fileUrls: FileUrlsMap,
+  ) {
     const paths: string[] = [];
     const oldDocs = this.ensureArray<any>(existing?.documents);
     const oldEmergency = this.ensureArray<any>(existing?.emergencyContacts);
 
     const getOldDocUrl = (t: string) =>
-      (oldDocs.find((d) => String(d?.documentType) === t)?.fileUrl ?? null) as string | null;
-
-    const getNewDocUrl = (t: string) =>
-      (this.ensureArray<any>(nextDto?.documents).find((d) => String(d?.documentType) === t)?.fileUrl ?? null) as
+      (oldDocs.find((d) => String(d?.documentType) === t)?.fileUrl ?? null) as
         | string
         | null;
 
-    const getOldEmergencyUrl = (i: number) => (oldEmergency?.[i]?.idFileUrl ?? null) as string | null;
+    const getNewDocUrl = (t: string) =>
+      (this.ensureArray<any>(nextDto?.documents).find(
+        (d) => String(d?.documentType) === t,
+      )?.fileUrl ?? null) as string | null;
+
+    const getOldEmergencyUrl = (i: number) =>
+      (oldEmergency?.[i]?.idFileUrl ?? null) as string | null;
 
     const getNewEmergencyUrl = (i: number) =>
-      (this.ensureArray<any>(nextDto?.emergencyContacts)?.[i]?.idFileUrl ?? null) as string | null;
+      (this.ensureArray<any>(nextDto?.emergencyContacts)?.[i]?.idFileUrl ??
+        null) as string | null;
 
     const considerDocType = (t: string) => {
       const oldUrl = getOldDocUrl(t);
@@ -105,6 +119,7 @@ export class ApplicantsService {
       else if (key === 'personalPhoto') considerDocType('PERSONAL_PHOTO');
       else if (key === 'cocCertificateFile') considerDocType('COC_CERTIFICATE');
       else if (key === 'applicantIdFile') considerDocType('APPLICANT_ID');
+      else if (key === 'document_CV') considerDocType('CV');
       else if (key.startsWith('document_')) {
         const t = key.slice('document_'.length);
         if (t) considerDocType(t);
@@ -119,10 +134,14 @@ export class ApplicantsService {
   }
 
   private normalizeDraftUpsertInput(dto: any) {
-    const passportExpiry = dto.passportExpiry ? new Date(dto.passportExpiry) : null;
+    const passportExpiry = dto.passportExpiry
+      ? new Date(dto.passportExpiry)
+      : null;
     this.draftTokens.ensurePassportExpiry(passportExpiry);
 
-    const passportIssueDate = dto.passportIssueDate ? new Date(dto.passportIssueDate) : null;
+    const passportIssueDate = dto.passportIssueDate
+      ? new Date(dto.passportIssueDate)
+      : null;
 
     return {
       phone: dto.phone,
@@ -154,25 +173,31 @@ export class ApplicantsService {
 
       address: dto.address ?? null,
 
-      emergencyContacts: dto.emergencyContacts ? dto.emergencyContacts.map((c: any) => ({ ...c })) : undefined,
+      emergencyContacts: dto.emergencyContacts
+        ? dto.emergencyContacts.map((c: any) => ({ ...c }))
+        : undefined,
       skills: dto.skills
         ? dto.skills.map((s: any) => ({
             skillId: s.skillId,
             hasSkill: s.hasSkill ?? true,
-            willingToLearn: s.willingToLearn ?? false
+            willingToLearn: s.willingToLearn ?? false,
           }))
         : undefined,
       qualifications: dto.qualifications
-        ? dto.qualifications.map((q: any) => ({ qualification: q.qualification }))
+        ? dto.qualifications.map((q: any) => ({
+            qualification: q.qualification,
+          }))
         : undefined,
       workExperiences: dto.workExperiences
         ? dto.workExperiences.map((w: any) => ({
             jobTitle: w.jobTitle,
             country: w.country ?? null,
-            yearsWorked: w.yearsWorked ?? null
+            yearsWorked: w.yearsWorked ?? null,
           }))
         : undefined,
-      documents: dto.documents ? dto.documents.map((d: any) => ({ ...d })) : undefined
+      documents: dto.documents
+        ? dto.documents.map((d: any) => ({ ...d }))
+        : undefined,
     };
   }
 
@@ -200,16 +225,23 @@ export class ApplicantsService {
     return missing;
   }
 
-  private async ensureApplicantUserOnSubmit(applicantId: string, password: string) {
-    if (!password || String(password).length < 8) throw new BadRequestException('Password must be at least 8 characters');
+  private async ensureApplicantUserOnSubmit(
+    applicantId: string,
+    password: string,
+  ) {
+    if (!password || String(password).length < 8)
+      throw new BadRequestException('Password must be at least 8 characters');
 
     const profile = await this.profiles.findById(applicantId);
     if (!profile) throw new BadRequestException('Applicant not found');
 
-    if (!profile.phone) throw new BadRequestException('Applicant phone missing');
+    if (!profile.phone)
+      throw new BadRequestException('Applicant phone missing');
 
     const result = await this.prisma.$transaction(async (tx) => {
-      const latest = await tx.applicantProfile.findUnique({ where: { applicantId } });
+      const latest = await tx.applicantProfile.findUnique({
+        where: { applicantId },
+      });
       if (!latest) throw new BadRequestException('Applicant not found');
 
       if (latest.userId) {
@@ -219,14 +251,17 @@ export class ApplicantsService {
             passwordHash: await bcrypt.hash(password, 12),
             status: 'PENDING',
             applicantVerified: false,
-            isActive: true
-          }
+            isActive: true,
+          },
         });
         return { userId: latest.userId };
       }
 
-      const existingUser = await tx.user.findUnique({ where: { phone: latest.phone } });
-      if (existingUser) throw new ConflictException('User already exists with this phone');
+      const existingUser = await tx.user.findUnique({
+        where: { phone: latest.phone },
+      });
+      if (existingUser)
+        throw new ConflictException('User already exists with this phone');
 
       const passwordHash = await bcrypt.hash(password, 12);
 
@@ -237,8 +272,8 @@ export class ApplicantsService {
           passwordHash,
           isActive: true,
           applicantVerified: false,
-          status: 'PENDING'
-        }
+          status: 'PENDING',
+        },
       });
 
       const role = await tx.role.findUnique({ where: { name: 'APPLICANT' } });
@@ -248,7 +283,7 @@ export class ApplicantsService {
 
       await tx.applicantProfile.update({
         where: { applicantId },
-        data: { userId: user.id }
+        data: { userId: user.id },
       });
 
       return { userId: user.id };
@@ -263,23 +298,32 @@ export class ApplicantsService {
 
     const dtoWithFiles = this.applyFilesToDto(dto, fileUrls);
 
-    this.draftTokens.parseLaborId(dtoWithFiles.gender ?? null, dtoWithFiles.laborId ?? null);
+    this.draftTokens.parseLaborId(
+      dtoWithFiles.gender ?? null,
+      dtoWithFiles.laborId ?? null,
+    );
 
-    const passportExpiry = dtoWithFiles.passportExpiry ? new Date(dtoWithFiles.passportExpiry) : null;
+    const passportExpiry = dtoWithFiles.passportExpiry
+      ? new Date(dtoWithFiles.passportExpiry)
+      : null;
     this.draftTokens.ensurePassportExpiry(passportExpiry);
 
-    const passportIssueDate = dtoWithFiles.passportIssueDate ? new Date(dtoWithFiles.passportIssueDate) : null;
+    const passportIssueDate = dtoWithFiles.passportIssueDate
+      ? new Date(dtoWithFiles.passportIssueDate)
+      : null;
 
     const payload: any = this.normalizeDraftUpsertInput({
       ...dtoWithFiles,
       passportIssueDate,
-      passportExpiry: dtoWithFiles.passportExpiry
+      passportExpiry: dtoWithFiles.passportExpiry,
     });
 
     payload.registrationSource = 'SELF';
     payload.createdBy = null;
 
-    const oldToDelete = existing ? this.collectOldPathsToDelete(existing, dtoWithFiles, fileUrls) : [];
+    const oldToDelete = existing
+      ? this.collectOldPathsToDelete(existing, dtoWithFiles, fileUrls)
+      : [];
 
     const profile = await this.profiles.upsertDraft(payload);
 
@@ -289,13 +333,21 @@ export class ApplicantsService {
     return { applicantId: profile.applicantId, ...token };
   }
 
-  async draftUpdateWithFiles(applicantId: string, dto: any, fileUrls: FileUrlsMap) {
+  async draftUpdateWithFiles(
+    applicantId: string,
+    dto: any,
+    fileUrls: FileUrlsMap,
+  ) {
     const profile = await this.profiles.findById(applicantId);
     if (!profile) throw new BadRequestException('Applicant not found');
     this.status.ensureDraftEditable(profile.profileStatus);
 
     const dtoWithFiles = this.applyFilesToDto(dto, fileUrls);
-    const oldToDelete = this.collectOldPathsToDelete(profile, dtoWithFiles, fileUrls);
+    const oldToDelete = this.collectOldPathsToDelete(
+      profile,
+      dtoWithFiles,
+      fileUrls,
+    );
 
     const merged: any = {
       phone: profile.phone,
@@ -306,12 +358,15 @@ export class ApplicantsService {
       lastName: dtoWithFiles.lastName ?? profile.lastName,
       gender: dtoWithFiles.gender ?? profile.gender,
 
-      dateOfBirth: dtoWithFiles.dateOfBirth ? new Date(dtoWithFiles.dateOfBirth) : profile.dateOfBirth,
+      dateOfBirth: dtoWithFiles.dateOfBirth
+        ? new Date(dtoWithFiles.dateOfBirth)
+        : profile.dateOfBirth,
       placeOfBirth: dtoWithFiles.placeOfBirth ?? profile.placeOfBirth,
       nationality: dtoWithFiles.nationality ?? profile.nationality,
       religion: dtoWithFiles.religion ?? profile.religion,
       maritalStatus: dtoWithFiles.maritalStatus ?? profile.maritalStatus,
-      numberOfChildren: dtoWithFiles.numberOfChildren ?? profile.numberOfChildren,
+      numberOfChildren:
+        dtoWithFiles.numberOfChildren ?? profile.numberOfChildren,
 
       occupation: dtoWithFiles.occupation ?? profile.occupation,
 
@@ -325,35 +380,46 @@ export class ApplicantsService {
       passportIssueDate: dtoWithFiles.passportIssueDate
         ? new Date(dtoWithFiles.passportIssueDate)
         : profile.passportIssueDate,
-      passportExpiry: dtoWithFiles.passportExpiry ? new Date(dtoWithFiles.passportExpiry) : profile.passportExpiry,
+      passportExpiry: dtoWithFiles.passportExpiry
+        ? new Date(dtoWithFiles.passportExpiry)
+        : profile.passportExpiry,
 
       address: dtoWithFiles.address ?? profile.address,
 
       registrationSource: profile.registrationSource ?? 'SELF',
       createdBy: profile.createdBy ?? null,
 
-      emergencyContacts: dtoWithFiles.emergencyContacts ? dtoWithFiles.emergencyContacts.map((c: any) => ({ ...c })) : undefined,
+      emergencyContacts: dtoWithFiles.emergencyContacts
+        ? dtoWithFiles.emergencyContacts.map((c: any) => ({ ...c }))
+        : undefined,
       skills: dtoWithFiles.skills
         ? dtoWithFiles.skills.map((s: any) => ({
             skillId: s.skillId,
             hasSkill: s.hasSkill ?? true,
-            willingToLearn: s.willingToLearn ?? false
+            willingToLearn: s.willingToLearn ?? false,
           }))
         : undefined,
       qualifications: dtoWithFiles.qualifications
-        ? dtoWithFiles.qualifications.map((q: any) => ({ qualification: q.qualification }))
+        ? dtoWithFiles.qualifications.map((q: any) => ({
+            qualification: q.qualification,
+          }))
         : undefined,
       workExperiences: dtoWithFiles.workExperiences
         ? dtoWithFiles.workExperiences.map((w: any) => ({
             jobTitle: w.jobTitle,
             country: w.country ?? null,
-            yearsWorked: w.yearsWorked ?? null
+            yearsWorked: w.yearsWorked ?? null,
           }))
         : undefined,
-      documents: dtoWithFiles.documents ? dtoWithFiles.documents.map((d: any) => ({ ...d })) : undefined
+      documents: dtoWithFiles.documents
+        ? dtoWithFiles.documents.map((d: any) => ({ ...d }))
+        : undefined,
     };
 
-    this.draftTokens.parseLaborId(merged.gender ?? null, merged.laborId ?? null);
+    this.draftTokens.parseLaborId(
+      merged.gender ?? null,
+      merged.laborId ?? null,
+    );
     this.draftTokens.ensurePassportExpiry(merged.passportExpiry ?? null);
 
     await this.profiles.upsertDraft(merged);
@@ -370,7 +436,8 @@ export class ApplicantsService {
     this.status.ensureDraftEditable(profile.profileStatus);
 
     if (passportNumber) {
-      const match = (profile.passportNumber ?? '').trim() === passportNumber.trim();
+      const match =
+        (profile.passportNumber ?? '').trim() === passportNumber.trim();
       if (!match) throw new ConflictException('Passport number mismatch');
     }
 
@@ -385,29 +452,42 @@ export class ApplicantsService {
     return profile;
   }
 
-  async agentDraftUpsertWithFiles(agentUserId: string, dto: any, fileUrls: FileUrlsMap) {
+  async agentDraftUpsertWithFiles(
+    agentUserId: string,
+    dto: any,
+    fileUrls: FileUrlsMap,
+  ) {
     const existing = await this.profiles.findByPhone(dto.phone);
     if (existing) this.status.ensureDraftEditable(existing.profileStatus);
 
     const dtoWithFiles = this.applyFilesToDto(dto, fileUrls);
 
-    this.draftTokens.parseLaborId(dtoWithFiles.gender ?? null, dtoWithFiles.laborId ?? null);
+    this.draftTokens.parseLaborId(
+      dtoWithFiles.gender ?? null,
+      dtoWithFiles.laborId ?? null,
+    );
 
-    const passportExpiry = dtoWithFiles.passportExpiry ? new Date(dtoWithFiles.passportExpiry) : null;
+    const passportExpiry = dtoWithFiles.passportExpiry
+      ? new Date(dtoWithFiles.passportExpiry)
+      : null;
     this.draftTokens.ensurePassportExpiry(passportExpiry);
 
-    const passportIssueDate = dtoWithFiles.passportIssueDate ? new Date(dtoWithFiles.passportIssueDate) : null;
+    const passportIssueDate = dtoWithFiles.passportIssueDate
+      ? new Date(dtoWithFiles.passportIssueDate)
+      : null;
 
     const payload: any = this.normalizeDraftUpsertInput({
       ...dtoWithFiles,
       passportIssueDate,
-      passportExpiry: dtoWithFiles.passportExpiry
+      passportExpiry: dtoWithFiles.passportExpiry,
     });
 
     payload.registrationSource = 'AGENCY';
     payload.createdBy = agentUserId;
 
-    const oldToDelete = existing ? this.collectOldPathsToDelete(existing, dtoWithFiles, fileUrls) : [];
+    const oldToDelete = existing
+      ? this.collectOldPathsToDelete(existing, dtoWithFiles, fileUrls)
+      : [];
 
     const profile = await this.profiles.upsertDraft(payload);
 
@@ -416,7 +496,11 @@ export class ApplicantsService {
     return { ok: true, applicantId: profile.applicantId };
   }
 
-  async submit(applicantId: string, draftTokenRecordId: string, password: string) {
+  async submit(
+    applicantId: string,
+    draftTokenRecordId: string,
+    password: string,
+  ) {
     const profile = await this.profiles.findById(applicantId);
     if (!profile) throw new BadRequestException('Applicant not found');
     this.status.ensureCanSubmit(profile.profileStatus);
@@ -425,39 +509,60 @@ export class ApplicantsService {
     if (missingFields.length) {
       throw new BadRequestException({
         message: 'Missing required profile fields',
-        missingFields
+        missingFields,
       });
     }
 
-    this.draftTokens.parseLaborId(profile.gender ?? null, profile.laborId ?? null);
+    this.draftTokens.parseLaborId(
+      profile.gender ?? null,
+      profile.laborId ?? null,
+    );
     this.draftTokens.ensurePassportExpiry(profile.passportExpiry ?? null);
 
-    const docTypes = new Set((profile.documents ?? []).map((d: any) => d.documentType));
+    const docTypes = new Set(
+      (profile.documents ?? []).map((d: any) => d.documentType),
+    );
     const requiredDocs = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE'];
     const missingDocuments = requiredDocs.filter((t) => !docTypes.has(t));
     if (missingDocuments.length) {
       throw new BadRequestException({
         message: 'Missing required documents',
-        missingDocuments
+        missingDocuments,
       });
     }
 
-    const userId = await this.ensureApplicantUserOnSubmit(applicantId, password);
+    const userId = await this.ensureApplicantUserOnSubmit(
+      applicantId,
+      password,
+    );
 
-    await this.profiles.setStatus(applicantId, 'SUBMITTED', { submittedAt: new Date(), rejectionReason: null });
+    await this.profiles.setStatus(applicantId, 'SUBMITTED', {
+      submittedAt: new Date(),
+      rejectionReason: null,
+    });
     await this.draftTokens.markUsed(draftTokenRecordId);
 
     return { ok: true, applicantId, userId };
   }
 
-  async agentList(agentUserId: string, status: string | undefined, page: number, pageSize: number) {
+  async agentList(
+    agentUserId: string,
+    status: string | undefined,
+    page: number,
+    pageSize: number,
+  ) {
     return this.profiles.listByCreator(agentUserId, status, page, pageSize);
   }
 
-  async agentSubmit(agentUserId: string, applicantId: string, password: string) {
+  async agentSubmit(
+    agentUserId: string,
+    applicantId: string,
+    password: string,
+  ) {
     const profile = await this.profiles.findById(applicantId);
     if (!profile) throw new NotFoundException('Applicant not found');
-    if (profile.createdBy !== agentUserId) throw new ForbiddenException('Not allowed');
+    if (profile.createdBy !== agentUserId)
+      throw new ForbiddenException('Not allowed');
 
     this.status.ensureCanSubmit(profile.profileStatus);
 
@@ -465,26 +570,37 @@ export class ApplicantsService {
     if (missingFields.length) {
       throw new BadRequestException({
         message: 'Missing required profile fields',
-        missingFields
+        missingFields,
       });
     }
 
-    this.draftTokens.parseLaborId(profile.gender ?? null, profile.laborId ?? null);
+    this.draftTokens.parseLaborId(
+      profile.gender ?? null,
+      profile.laborId ?? null,
+    );
     this.draftTokens.ensurePassportExpiry(profile.passportExpiry ?? null);
 
-    const docTypes = new Set((profile.documents ?? []).map((d: any) => d.documentType));
+    const docTypes = new Set(
+      (profile.documents ?? []).map((d: any) => d.documentType),
+    );
     const requiredDocs = ['PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE'];
     const missingDocuments = requiredDocs.filter((t) => !docTypes.has(t));
     if (missingDocuments.length) {
       throw new BadRequestException({
         message: 'Missing required documents',
-        missingDocuments
+        missingDocuments,
       });
     }
 
-    const userId = await this.ensureApplicantUserOnSubmit(applicantId, password);
+    const userId = await this.ensureApplicantUserOnSubmit(
+      applicantId,
+      password,
+    );
 
-    await this.profiles.setStatus(applicantId, 'SUBMITTED', { submittedAt: new Date(), rejectionReason: null });
+    await this.profiles.setStatus(applicantId, 'SUBMITTED', {
+      submittedAt: new Date(),
+      rejectionReason: null,
+    });
 
     return { ok: true, applicantId, userId };
   }

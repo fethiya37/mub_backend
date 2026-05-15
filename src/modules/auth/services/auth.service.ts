@@ -25,7 +25,7 @@ import { getEmailVerifyTemplate } from '../../mail/templates/email-verify.templa
 import { AccountActionTokensService } from './account-action-tokens.service';
 import { AdminResetApplicantPasswordDto } from '../dto/admin-reset-applicant-password.dto';
 
-type AdminCreatableRole = 'MUB_STAFF' | 'FINANCE_OFFICER' | 'SYSTEM';
+type AdminCreatableRole = 'STAFF' | 'FINANCE_OFFICER' | 'SYSTEM';
 type AccountActionType = 'ACCOUNT_SETUP' | 'PASSWORD_RESET' | 'EMAIL_VERIFY';
 
 @Injectable()
@@ -148,7 +148,7 @@ export class AuthService {
   }
 
   async adminCreateUser(dto: AdminCreateUserDto, performedBy: string) {
-    const allowed: Record<string, true> = { MUB_STAFF: true, FINANCE_OFFICER: true, SYSTEM: true };
+    const allowed: Record<string, true> = { STAFF: true, FINANCE_OFFICER: true, SYSTEM: true };
     if (!allowed[dto.role]) throw new BadRequestException('Role cannot be created directly');
 
     const existsPhone = await this.users.findByIdentifier(dto.phone);

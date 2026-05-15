@@ -1,10 +1,10 @@
 export const ROLES = {
   APPLICANT: 'APPLICANT',
   LOCAL_AGENCY: 'LOCAL_AGENCY',
-  MUB_STAFF: 'MUB_STAFF',
+  STAFF: 'STAFF',
   MUB_ADMIN: 'MUB_ADMIN',
   PARTNER_EMPLOYER: 'PARTNER_EMPLOYER',
-  FINANCE_OFFICER: 'FINANCE_OFFICER'
+  FINANCE_OFFICER: 'FINANCE_OFFICER',
 } as const;
 
 export const PERMISSIONS = [
@@ -16,7 +16,6 @@ export const PERMISSIONS = [
   'USER_REACTIVATE',
   'USER_APPROVE',
   'USER_REJECT',
-
 
   'RBAC_MANAGE',
 
@@ -90,7 +89,6 @@ export const PERMISSIONS = [
 
   'REPORT_VIEW',
   'REPORT_ANALYTICS_VIEW',
-
 ] as const;
 
 export type RoleCode = (typeof ROLES)[keyof typeof ROLES];
@@ -99,7 +97,7 @@ export type PermissionCode = (typeof PERMISSIONS)[number];
 export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
   [ROLES.MUB_ADMIN]: [...PERMISSIONS],
 
-  [ROLES.MUB_STAFF]: [
+  [ROLES.STAFF]: [
     'USER_READ',
 
     'APPLICANT_VIEW',
@@ -123,8 +121,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICATION_CREATE',
     'APPLICATION_MANAGE',
 
-  
-
     'MEDICAL_VIEW',
     'MEDICAL_UPLOAD_RESULT',
     'MEDICAL_UPDATE_CLEARANCE',
@@ -134,8 +130,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'VISA_CREATE',
     'VISA_UPDATE',
     'VISA_SUBMIT',
-
-
 
     'REPORT_VIEW',
   ],
@@ -170,8 +164,6 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICATION_VIEW_SELF',
     'APPLICATION_CREATE_SELF',
 
-
-
     'VISA_VIEW_SELF',
   ],
 
@@ -193,13 +185,13 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICATION_VIEW',
     'APPLICATION_MANAGE',
 
-    'REPORT_VIEW'
+    'REPORT_VIEW',
   ],
 
   [ROLES.FINANCE_OFFICER]: [
     'APPLICANT_EXPENSE_TYPE_MANAGE',
     'APPLICANT_EXPENSE_MANAGE',
     'COMPANY_EXPENSE_TYPE_MANAGE',
-    'COMPANY_EXPENSE_MANAGE'
-  ]
+    'COMPANY_EXPENSE_MANAGE',
+  ],
 } as const;

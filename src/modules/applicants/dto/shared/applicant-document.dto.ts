@@ -8,7 +8,7 @@ export class ApplicantDocumentDto {
     example: 'PASSPORT',
     enum: ApplicantDocumentTypes,
     description:
-      'Allowed values: PASSPORT | PERSONAL_PHOTO | COC_CERTIFICATE | APPLICANT_ID | OTHER'
+      'Allowed values: PASSPORT | PERSONAL_PHOTO | CV | COC_CERTIFICATE | APPLICANT_ID | OTHER',
   })
   @IsIn(ApplicantDocumentTypes)
   documentType!: ApplicantDocumentType;
@@ -17,7 +17,7 @@ export class ApplicantDocumentDto {
     type: 'string',
     format: 'binary',
     description:
-      'Upload file when using multipart/form-data. Field name should match document_<TYPE> if using dynamic upload.'
+      'Upload file when using multipart/form-data. Field name should match document_<TYPE> if using dynamic upload.',
   })
   @IsOptional()
   file?: any;
@@ -25,14 +25,14 @@ export class ApplicantDocumentDto {
   @ApiProperty({
     example: '/uploads/applicants/documents/passport-uuid.pdf',
     description:
-      'Relative file URL saved after upload. Example paths provided below.'
+      'Relative file URL saved after upload. Example paths provided below.',
   })
   @IsString()
   fileUrl!: string;
 
   @ApiPropertyOptional({
     example: 'PENDING',
-    description: 'Optional review status'
+    description: 'Optional review status',
   })
   @IsOptional()
   @IsString()

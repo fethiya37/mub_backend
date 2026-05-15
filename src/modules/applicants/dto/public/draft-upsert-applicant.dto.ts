@@ -8,7 +8,7 @@ import {
   IsOptional,
   IsString,
   MinLength,
-  ValidateNested
+  ValidateNested,
 } from 'class-validator';
 
 import { ApplicantSkillDto } from '../shared/applicant-skill.dto';
@@ -142,7 +142,10 @@ export class DraftUpsertApplicantDto {
 
   @ApiPropertyOptional({ type: [ApplicantSkillDto] })
   @IsOptional()
-  @JsonArrayOf(ApplicantSkillDto, { fieldName: 'skills', allowSingleObject: true })
+  @JsonArrayOf(ApplicantSkillDto, {
+    fieldName: 'skills',
+    allowSingleObject: true,
+  })
   @IsArray()
   @ValidateNested({ each: true })
   skills?: ApplicantSkillDto[];
@@ -164,11 +167,32 @@ export class DraftUpsertApplicantDto {
   @ApiPropertyOptional({
     type: [ApplicantDocumentDto],
     example: [
-      { documentType: 'PASSPORT', fileUrl: '/uploads/applicants/documents/passport.pdf', status: 'PENDING' },
-      { documentType: 'PERSONAL_PHOTO', fileUrl: '/uploads/applicants/photos/photo.jpg', status: 'PENDING' },
-      { documentType: 'COC_CERTIFICATE', fileUrl: '/uploads/applicants/certificates/coc.pdf', status: 'PENDING' },
-      { documentType: 'APPLICANT_ID', fileUrl: '/uploads/applicants/ids/id.pdf', status: 'PENDING' }
-    ]
+      {
+        documentType: 'PASSPORT',
+        fileUrl: '/uploads/applicants/documents/passport.pdf',
+        status: 'PENDING',
+      },
+      {
+        documentType: 'PERSONAL_PHOTO',
+        fileUrl: '/uploads/applicants/photos/photo.jpg',
+        status: 'PENDING',
+      },
+      {
+        documentType: 'COC_CERTIFICATE',
+        fileUrl: '/uploads/applicants/certificates/coc.pdf',
+        status: 'PENDING',
+      },
+      {
+        documentType: 'APPLICANT_ID',
+        fileUrl: '/uploads/applicants/ids/id.pdf',
+        status: 'PENDING',
+      },
+      {
+        documentType: 'CV',
+        fileUrl: '/uploads/applicants/cvs/id.pdf',
+        status: 'PENDING',
+      },
+    ],
   })
   @IsOptional()
   @JsonArrayOf(ApplicantDocumentDto, { fieldName: 'documents' })

@@ -8,7 +8,9 @@ import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
 
 async function bootstrap() {
-  const app = await NestFactory.create<NestExpressApplication>(AppModule, { cors: true });
+  const app = await NestFactory.create<NestExpressApplication>(AppModule, {
+    cors: true,
+  });
 
   app.useGlobalPipes(
     new ValidationPipe({
@@ -16,9 +18,9 @@ async function bootstrap() {
       forbidNonWhitelisted: true,
       transform: true,
       transformOptions: {
-        enableImplicitConversion: false
-      }
-    })
+        enableImplicitConversion: false,
+      },
+    }),
   );
 
   const uploadDir = process.env.UPLOAD_DIR?.trim()
@@ -33,15 +35,39 @@ async function bootstrap() {
     .setTitle(process.env.APP_NAME ?? 'MUB Foreign Employment Agent System')
     .setDescription('MUB Foreign Employment Agent System API')
     .setVersion('1.0.0')
-    .addBearerAuth({ type: 'http', scheme: 'bearer', bearerFormat: 'JWT' }, 'bearer')
-    .addApiKey({ type: 'apiKey', name: 'X-Draft-Token', in: 'header', description: 'Raw draft token value' }, 'draft')
+    .addBearerAuth(
+      { type: 'http', scheme: 'bearer', bearerFormat: 'JWT' },
+      'bearer',
+    )
+    .addApiKey(
+      {
+        type: 'apiKey',
+        name: 'X-Draft-Token',
+        in: 'header',
+        description: 'Raw draft token value',
+      },
+      'draft',
+    )
     .build();
 
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
+  // const port = Number(process.env.PORT ?? process.env.APP_PORT ?? 3000);
+  // await app.listen(port, '0.0.0.0');
+
   const port = Number(process.env.PORT ?? process.env.APP_PORT ?? 3000);
-  await app.listen(port, '0.0.0.0');
+  const host = '0.0.0.0';
+  const baseUrl = process.env.APP_BASE_URL || `http://localhost:${port}`;
+
+  await app.listen(port, host);
+
+  console.log(`✅ Application is running on: ${baseUrl}`);
+  console.log(`📚 Swagger UI available at: ${baseUrl}/api/docs`);
+  console.log(
+    `🔌 Socket.IO Notification endpoint: ws://localhost:${port}/notifications`,
+  );
+  console.log(`📁 Uploads available at: ${baseUrl}/uploads`);
 }
 
 bootstrap();

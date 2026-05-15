@@ -1,5 +1,11 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsArray, IsEmail, IsOptional, IsString, ValidateNested } from 'class-validator';
+import {
+  IsArray,
+  IsEmail,
+  IsOptional,
+  IsString,
+  ValidateNested,
+} from 'class-validator';
 import { ApplicantSkillDto } from '../shared/applicant-skill.dto';
 import { ApplicantQualificationDto } from '../shared/applicant-qualification.dto';
 import { ApplicantWorkExperienceDto } from '../shared/applicant-work-experience.dto';
@@ -43,13 +49,19 @@ export class UpdateVerifiedApplicantDto {
   @IsOptional()
   cocCertificateFile?: any;
 
+  @ApiPropertyOptional({ type: 'string', format: 'binary' })
+  @IsOptional()
+  document_CV?: any;
+
   @ApiPropertyOptional({ type: [ApplicantSkillDto] })
   @IsOptional()
-  @JsonArrayOf(ApplicantSkillDto, { fieldName: 'skills', allowSingleObject: true })
+  @JsonArrayOf(ApplicantSkillDto, {
+    fieldName: 'skills',
+    allowSingleObject: true,
+  })
   @IsArray()
   @ValidateNested({ each: true })
   skills?: ApplicantSkillDto[];
-
 
   @ApiPropertyOptional({ type: [ApplicantQualificationDto] })
   @IsOptional()

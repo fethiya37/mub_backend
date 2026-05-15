@@ -30,7 +30,7 @@ export type ApplicantProfileUpsertInput = {
 
   address?: string | null;
 
-  registrationSource?: 'SELF' | 'AGENCY' | 'MUB_STAFF' | null;
+  registrationSource?: 'SELF' | 'AGENCY' | 'STAFF' | null;
   createdBy?: string | null;
 
   emergencyContacts?:

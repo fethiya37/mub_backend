@@ -10,15 +10,24 @@ import { JobApplicationStatusService } from './services/job-application-status.s
 
 import { JobApplicationRepository } from './repositories/job-application.repository';
 import { JobApplicationPrismaRepository } from './prisma/job-application.prisma-repository';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 @Module({
-  controllers: [ApplicantApplicationsController, AdminApplicationsController, EmployerApplicationsController],
+  imports: [NotificationsModule],
+  controllers: [
+    ApplicantApplicationsController,
+    AdminApplicationsController,
+    EmployerApplicationsController,
+  ],
   providers: [
     PrismaService,
     JobApplicationsService,
     JobApplicationStatusService,
-    { provide: JobApplicationRepository, useClass: JobApplicationPrismaRepository }
+    {
+      provide: JobApplicationRepository,
+      useClass: JobApplicationPrismaRepository,
+    },
   ],
-  exports: [JobApplicationsService]
+  exports: [JobApplicationsService],
 })
 export class JobApplicationsModule {}

@@ -1,17 +1,24 @@
 import { ApiPropertyOptional } from '@nestjs/swagger';
-import { IsDateString, IsIn, IsOptional, IsString, IsUUID } from 'class-validator';
+import {
+  IsDateString,
+  IsIn,
+  IsOptional,
+  IsString,
+  IsUUID,
+} from 'class-validator';
 
-export const ApplicantsBySourceValues = ['SELF', 'AGENCY', 'MUB_STAFF'] as const;
+export const ApplicantsBySourceValues = ['SELF', 'AGENCY', 'STAFF'] as const;
 export type ApplicantsBySourceValue = (typeof ApplicantsBySourceValues)[number];
 
 export const ApplicantsBySourceExportTypes = ['excel', 'pdf'] as const;
-export type ApplicantsBySourceExportType = (typeof ApplicantsBySourceExportTypes)[number];
+export type ApplicantsBySourceExportType =
+  (typeof ApplicantsBySourceExportTypes)[number];
 
 export class ApplicantsBySourceQueryDto {
   @ApiPropertyOptional({
     example: 'SELF',
     enum: ApplicantsBySourceValues,
-    description: 'Registration source filter'
+    description: 'Registration source filter',
   })
   @IsOptional()
   @IsIn(ApplicantsBySourceValues)
@@ -29,7 +36,8 @@ export class ApplicantsBySourceQueryDto {
 
   @ApiPropertyOptional({
     example: 'uuid-user-id',
-    description: 'Creator userId (Agency user or Staff/Admin user). Not applicable for SELF'
+    description:
+      'Creator userId (Agency user or Staff/Admin user). Not applicable for SELF',
   })
   @IsOptional()
   @IsUUID()
@@ -45,7 +53,10 @@ export class ApplicantsBySourceQueryDto {
   @IsString()
   pageSize?: string;
 
-  @ApiPropertyOptional({ example: 'excel', enum: ApplicantsBySourceExportTypes })
+  @ApiPropertyOptional({
+    example: 'excel',
+    enum: ApplicantsBySourceExportTypes,
+  })
   @IsOptional()
   @IsIn(ApplicantsBySourceExportTypes)
   export?: ApplicantsBySourceExportType;

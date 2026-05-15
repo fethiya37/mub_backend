@@ -1,6 +1,11 @@
 import { ApiProperty } from '@nestjs/swagger';
 
-export const ApplicantProfileStatuses = ['DRAFT', 'SUBMITTED', 'REJECTED', 'VERIFIED'] as const;
+export const ApplicantProfileStatuses = [
+  'DRAFT',
+  'SUBMITTED',
+  'REJECTED',
+  'VERIFIED',
+] as const;
 export type ApplicantProfileStatus = (typeof ApplicantProfileStatuses)[number];
 
 export const ApplicantDocumentTypes = [
@@ -8,15 +13,21 @@ export const ApplicantDocumentTypes = [
   'PERSONAL_PHOTO',
   'COC_CERTIFICATE',
   'APPLICANT_ID',
-  'OTHER'
+  'CV',
+  'OTHER',
 ] as const;
 export type ApplicantDocumentType = (typeof ApplicantDocumentTypes)[number];
 
 export const Genders = ['MALE', 'FEMALE'] as const;
 export type Gender = (typeof Genders)[number];
 
-export const ApplicantRegistrationSources = ['SELF', 'AGENCY', 'MUB_STAFF'] as const;
-export type ApplicantRegistrationSource = (typeof ApplicantRegistrationSources)[number];
+export const ApplicantRegistrationSources = [
+  'SELF',
+  'AGENCY',
+  'STAFF',
+] as const;
+export type ApplicantRegistrationSource =
+  (typeof ApplicantRegistrationSources)[number];
 
 export class EnumsDoc {
   @ApiProperty({ example: ApplicantProfileStatuses })

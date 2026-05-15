@@ -46,6 +46,8 @@ model User {
   localAgency             LocalAgency?
   localAgencyApprovalLogs LocalAgencyApprovalLog[] @relation("LocalAgencyActionBy")
   visaCases               VisaCase[]
+  notifications           Notification[]
+  notificationPreferences NotificationPreference?
 }
 
 
@@ -231,13 +233,14 @@ enum ApplicantDocumentType {
   PERSONAL_PHOTO
   COC_CERTIFICATE
   APPLICANT_ID
+  CV
   OTHER
 }
 
 enum ApplicantRegistrationSource {
   SELF
   AGENCY
-  MUB_STAFF
+  STAFF
 }
 
 model ApplicantProfile {
@@ -819,3 +822,27 @@ model ApplicantExpense {
 }
 
 
+model Notification {
+  id         String   @id @default(uuid())
+  userId     String
+  type       String
+  title      String
+  message    String
+  isRead     Boolean  @default(false)
+  createdAt  DateTime @default(now())
+  
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@index([userId])
+  @@index([isRead])
+  @@index([createdAt])
+}
+
+model NotificationPreference {
+  id           String   @id @default(uuid())
+  userId       String   @unique
+  emailEnabled Boolean  @default(true)
+  inAppEnabled Boolean  @default(true)
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+}

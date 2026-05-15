@@ -1,4 +1,8 @@
-import { BadRequestException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 import { $Enums } from '@prisma/client';
 
@@ -15,6 +19,8 @@ import { VisaReturnRepository } from '../repositories/visa-return.repository';
 import { VisaAccessService } from './visa-access.service';
 import { VisaStatusService } from './visa-status.service';
 import { VisaAttemptNumberService } from './visa-attempt-number.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
+import { NOTIFICATION_TYPES } from '../../notifications/constants/notification-types.constant';
 
 import type { AdminCreateVisaCaseDto } from '../dto/admin/admin-create-visa-case.dto';
 import type { AdminAssignCaseManagerDto } from '../dto/admin/admin-assign-case-manager.dto';
@@ -46,7 +52,8 @@ export class VisasService {
     private readonly returns: VisaReturnRepository,
     private readonly access: VisaAccessService,
     private readonly status: VisaStatusService,
-    private readonly attemptNumbers: VisaAttemptNumberService
+    private readonly attemptNumbers: VisaAttemptNumberService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   private page(v?: number) {
@@ -59,14 +66,19 @@ export class VisasService {
   }
 
   private applicantName(a: any) {
-    const name = [a?.firstName, a?.middleName, a?.lastName].map((x: string | null | undefined) => (x ?? '').trim()).filter(Boolean).join(' ').trim();
+    const name = [a?.firstName, a?.middleName, a?.lastName]
+      .map((x: string | null | undefined) => (x ?? '').trim())
+      .filter(Boolean)
+      .join(' ')
+      .trim();
     if (name.length) return name;
     if (a?.phone) return a.phone;
     return null;
   }
 
   private caseManagerName(u: any) {
-    if (u?.fullName && String(u.fullName).trim().length) return String(u.fullName).trim();
+    if (u?.fullName && String(u.fullName).trim().length)
+      return String(u.fullName).trim();
     if (u?.phone) return u.phone;
     if (u?.email) return u.email;
     return null;
@@ -90,25 +102,75 @@ export class VisasService {
       sponsorName: item.sponsor?.fullName ?? null,
       completedStatuses: item.completedStatuses ?? [],
       createdAt: item.createdAt,
-      updatedAt: item.updatedAt
+      updatedAt: item.updatedAt,
     };
   }
 
-  private async setStatusAndMaybeComplete(visaCaseId: string, status: $Enums.VisaCaseStatus, complete?: $Enums.VisaCaseStatus) {
+  private async setStatusAndMaybeComplete(
+    visaCaseId: string,
+    status: $Enums.VisaCaseStatus,
+    complete?: $Enums.VisaCaseStatus,
+  ) {
     const current = await this.prisma.visaCase.findUnique({
       where: { id: visaCaseId },
-      select: { completedStatuses: true }
+      select: { completedStatuses: true },
     });
     if (!current) throw new NotFoundException('Visa case not found');
 
     const completedStatuses = complete
       ? Array.from(new Set([...(current.completedStatuses ?? []), complete]))
-      : current.completedStatuses ?? [];
+      : (current.completedStatuses ?? []);
 
     await this.cases.update(visaCaseId, {
       status,
-      completedStatuses
+      completedStatuses,
     });
+  }
+
+  private async getApplicantUserId(
+    applicantId: string,
+  ): Promise<string | null> {
+    const applicant = await this.prisma.applicantProfile.findUnique({
+      where: { applicantId },
+      select: { userId: true },
+    });
+    return applicant?.userId ?? null;
+  }
+
+  private async getPartnerUserId(
+    partnerId: string | null,
+  ): Promise<string | null> {
+    if (!partnerId) return null;
+    const employer = await this.prisma.employer.findUnique({
+      where: { id: partnerId },
+      select: { userId: true },
+    });
+    return employer?.userId ?? null;
+  }
+
+  private async sendNotificationToApplicant(
+    applicantId: string,
+    type: string,
+    title: string,
+    message: string,
+  ) {
+    const userId = await this.getApplicantUserId(applicantId);
+    if (userId) {
+      await this.notifications.create(userId, type as any, title, message);
+    }
+  }
+
+  private async sendNotificationToPartner(
+    partnerId: string | null,
+    type: string,
+    title: string,
+    message: string,
+  ) {
+    if (!partnerId) return;
+    const userId = await this.getPartnerUserId(partnerId);
+    if (userId) {
+      await this.notifications.create(userId, type as any, title, message);
+    }
   }
 
   async adminCreateCase(adminUserId: string, dto: AdminCreateVisaCaseDto) {
@@ -124,10 +186,28 @@ export class VisasService {
       jobId: dto.jobId ?? null,
       destinationCountry: dto.destinationCountry,
       caseManagerUserId: adminUserId,
-      sponsorId: dto.sponsorId ?? null
+      sponsorId: dto.sponsorId ?? null,
     };
 
-    return this.cases.create(input);
+    const result = await this.cases.create(input);
+
+    await this.sendNotificationToApplicant(
+      dto.applicantId,
+      NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+      'Visa Application Initiated',
+      `Your visa application to ${dto.destinationCountry} has been initiated.`,
+    );
+
+    if (dto.partnerId) {
+      await this.sendNotificationToPartner(
+        dto.partnerId,
+        NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+        'Visa Application Initiated',
+        `A visa application has been initiated for a candidate going to ${dto.destinationCountry}.`,
+      );
+    }
+
+    return result;
   }
 
   async adminListCases(q: AdminListVisaCasesQueryDto) {
@@ -137,26 +217,30 @@ export class VisasService {
         partnerId: q.partnerId,
         jobId: q.jobId,
         status: q.status,
-        isActive: q.isActive
+        isActive: q.isActive,
       },
       this.page(q.page),
-      this.pageSize(q.pageSize, 50)
+      this.pageSize(q.pageSize, 50),
     );
 
     return {
       ...r,
-      items: r.items.map((x: any) => this.toCaseListItem(x))
+      items: r.items.map((x: any) => this.toCaseListItem(x)),
     };
   }
 
-  async adminAssignCaseManager(_adminUserId: string, visaCaseId: string, dto: AdminAssignCaseManagerDto) {
+  async adminAssignCaseManager(
+    _adminUserId: string,
+    visaCaseId: string,
+    dto: AdminAssignCaseManagerDto,
+  ) {
     const c = await this.getCaseOrThrow(visaCaseId);
     this.status.ensureCaseActive(c.isActive);
 
     await this.ensureUserExists(dto.caseManagerUserId);
 
     return this.cases.update(visaCaseId, {
-      caseManagerUserId: dto.caseManagerUserId
+      caseManagerUserId: dto.caseManagerUserId,
     });
   }
 
@@ -164,21 +248,36 @@ export class VisasService {
     const c = await this.getCaseOrThrow(dto.visaCaseId);
     this.status.ensureCaseActive(c.isActive);
 
-    if (!dto.reportFileUrl) throw new BadRequestException('reportFileUrl is required');
+    if (!dto.reportFileUrl)
+      throw new BadRequestException('reportFileUrl is required');
 
     const medical = await this.medical.upsert({
       visaCaseId: dto.visaCaseId,
       reportFileUrl: dto.reportFileUrl,
       result: dto.result,
-      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null
+      expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
     });
 
-    await this.setStatusAndMaybeComplete(dto.visaCaseId, this.status.statusForMedical(), $Enums.VisaCaseStatus.MEDICAL);
+    await this.setStatusAndMaybeComplete(
+      dto.visaCaseId,
+      this.status.statusForMedical(),
+      $Enums.VisaCaseStatus.MEDICAL,
+    );
+
+    await this.sendNotificationToApplicant(
+      c.applicantId,
+      NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+      'Medical Examination Update',
+      `Your medical examination result has been recorded: ${dto.result === 'FIT' ? 'Fit' : 'Unfit'}`,
+    );
 
     return medical;
   }
 
-  async adminUpsertInsurance(_adminUserId: string, dto: AdminUpsertInsuranceDto) {
+  async adminUpsertInsurance(
+    _adminUserId: string,
+    dto: AdminUpsertInsuranceDto,
+  ) {
     const c = await this.getCaseOrThrow(dto.visaCaseId);
     this.status.ensureCaseActive(c.isActive);
 
@@ -186,40 +285,82 @@ export class VisasService {
       visaCaseId: dto.visaCaseId,
       providerName: dto.providerName ?? null,
       policyNumber: dto.policyNumber ?? null,
-      policyFileUrl: dto.policyFileUrl ?? null
+      policyFileUrl: dto.policyFileUrl ?? null,
     });
 
-    await this.setStatusAndMaybeComplete(dto.visaCaseId, this.status.statusForInsurance(), $Enums.VisaCaseStatus.INSURANCE);
+    await this.setStatusAndMaybeComplete(
+      dto.visaCaseId,
+      this.status.statusForInsurance(),
+      $Enums.VisaCaseStatus.INSURANCE,
+    );
+
+    await this.sendNotificationToApplicant(
+      c.applicantId,
+      NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+      'Insurance Policy Added',
+      `Your insurance policy has been added. Policy number: ${dto.policyNumber || 'N/A'}`,
+    );
 
     return insurance;
   }
 
-  async adminSetFingerprint(_adminUserId: string, visaCaseId: string, dto: AdminSetFingerprintDto) {
+  async adminSetFingerprint(
+    _adminUserId: string,
+    visaCaseId: string,
+    dto: AdminSetFingerprintDto,
+  ) {
     const c = await this.getCaseOrThrow(visaCaseId);
     this.status.ensureCaseActive(c.isActive);
 
-    const fp = await this.fingerprint.upsert({ visaCaseId, isDone: dto.isDone });
+    const fp = await this.fingerprint.upsert({
+      visaCaseId,
+      isDone: dto.isDone,
+    });
 
     await this.setStatusAndMaybeComplete(
       visaCaseId,
       this.status.statusForFingerprint(),
-      dto.isDone ? $Enums.VisaCaseStatus.FINGERPRINT : undefined
+      dto.isDone ? $Enums.VisaCaseStatus.FINGERPRINT : undefined,
     );
+
+    if (dto.isDone) {
+      await this.sendNotificationToApplicant(
+        c.applicantId,
+        NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+        'Fingerprint Completed',
+        'Your fingerprint process has been completed successfully.',
+      );
+    }
 
     return fp;
   }
 
-  async adminUpsertEmbassy(_adminUserId: string, dto: AdminUpsertEmbassyProcessDto) {
+  async adminUpsertEmbassy(
+    _adminUserId: string,
+    dto: AdminUpsertEmbassyProcessDto,
+  ) {
     const c = await this.getCaseOrThrow(dto.visaCaseId);
     this.status.ensureCaseActive(c.isActive);
 
-    const ep = await this.embassy.upsert({ visaCaseId: dto.visaCaseId, status: dto.status });
+    const ep = await this.embassy.upsert({
+      visaCaseId: dto.visaCaseId,
+      status: dto.status,
+    });
 
     await this.setStatusAndMaybeComplete(
       dto.visaCaseId,
       this.status.statusForEmbassy(),
-      dto.status === 'COMPLETED' ? $Enums.VisaCaseStatus.EMBASSY : undefined
+      dto.status === 'COMPLETED' ? $Enums.VisaCaseStatus.EMBASSY : undefined,
     );
+
+    if (dto.status === 'COMPLETED') {
+      await this.sendNotificationToApplicant(
+        c.applicantId,
+        NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+        'Embassy Process Completed',
+        'Your embassy process has been completed successfully.',
+      );
+    }
 
     return ep;
   }
@@ -228,25 +369,47 @@ export class VisasService {
     const c = await this.getCaseOrThrow(dto.visaCaseId);
     this.status.ensureCaseActive(c.isActive);
 
-    const lp = await this.lmis.upsert({ visaCaseId: dto.visaCaseId, status: dto.status });
+    const lp = await this.lmis.upsert({
+      visaCaseId: dto.visaCaseId,
+      status: dto.status,
+    });
 
     await this.setStatusAndMaybeComplete(
       dto.visaCaseId,
       this.status.statusForLMIS(),
-      dto.status !== 'PENDING' ? $Enums.VisaCaseStatus.LMIS : undefined
+      dto.status !== 'PENDING' ? $Enums.VisaCaseStatus.LMIS : undefined,
     );
+
+    if (dto.status === 'ISSUED') {
+      await this.sendNotificationToApplicant(
+        c.applicantId,
+        NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+        'LMIS Certificate Issued',
+        'Your LMIS certificate has been issued.',
+      );
+    } else if (dto.status === 'REJECTED') {
+      await this.sendNotificationToApplicant(
+        c.applicantId,
+        NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+        'LMIS Application Rejected',
+        'Your LMIS application has been rejected. Please contact support.',
+      );
+    }
 
     return lp;
   }
 
-  async adminCreateAttempt(_adminUserId: string, dto: AdminCreateVisaAttemptDto) {
+  async adminCreateAttempt(
+    _adminUserId: string,
+    dto: AdminCreateVisaAttemptDto,
+  ) {
     const c = await this.getCaseOrThrow(dto.visaCaseId);
     this.status.ensureCaseActive(c.isActive);
 
     const created = await this.prisma.$transaction(async (tx) => {
       const max = await tx.visaAttempt.aggregate({
         where: { visaCaseId: dto.visaCaseId },
-        _max: { attemptNumber: true }
+        _max: { attemptNumber: true },
       });
 
       const attemptNumber = (max._max.attemptNumber ?? 0) + 1;
@@ -262,17 +425,51 @@ export class VisasService {
           expiresAt: dto.expiresAt ? new Date(dto.expiresAt) : null,
           rejectionReason: dto.rejectionReason ?? null,
           barcodeValue: dto.barcodeValue ?? null,
-          barcodeImageUrl: dto.barcodeImageUrl ?? null
-        }
+          barcodeImageUrl: dto.barcodeImageUrl ?? null,
+        },
       });
     });
 
-    await this.setStatusAndMaybeComplete(dto.visaCaseId, this.status.statusForVisaAttempt(), $Enums.VisaCaseStatus.VISA);
+    await this.setStatusAndMaybeComplete(
+      dto.visaCaseId,
+      this.status.statusForVisaAttempt(),
+      $Enums.VisaCaseStatus.VISA,
+    );
+
+    if (dto.status === 'ISSUED') {
+      const visaCase = await this.cases.findById(dto.visaCaseId);
+
+      await this.sendNotificationToApplicant(
+        visaCase.applicantId,
+        NOTIFICATION_TYPES.VISA_ATTEMPT_ISSUED,
+        'Visa Issued! 🎉',
+        `Your visa has been issued successfully! Visa Number: ${dto.visaNumber || 'N/A'}`,
+      );
+
+      await this.sendNotificationToPartner(
+        visaCase.partnerId,
+        NOTIFICATION_TYPES.VISA_ATTEMPT_ISSUED,
+        'Visa Issued for Candidate',
+        `Visa has been issued for candidate. Visa Number: ${dto.visaNumber || 'N/A'}`,
+      );
+    } else if (dto.status === 'REJECTED') {
+      const visaCase = await this.cases.findById(dto.visaCaseId);
+
+      await this.sendNotificationToApplicant(
+        visaCase.applicantId,
+        NOTIFICATION_TYPES.VISA_ATTEMPT_REJECTED,
+        'Visa Application Update',
+        `Your visa application was rejected. Reason: ${dto.rejectionReason || 'Not specified'}`,
+      );
+    }
 
     return created;
   }
 
-  async adminCreateFlight(_adminUserId: string, dto: AdminCreateFlightBookingDto) {
+  async adminCreateFlight(
+    _adminUserId: string,
+    dto: AdminCreateFlightBookingDto,
+  ) {
     const c = await this.getCaseOrThrow(dto.visaCaseId);
     this.status.ensureCaseActive(c.isActive);
 
@@ -281,13 +478,34 @@ export class VisasService {
       pnr: dto.pnr,
       airline: dto.airline ?? null,
       departureAt: dto.departureAt ? new Date(dto.departureAt) : null,
-      arrivalAt: dto.arrivalAt ? new Date(dto.arrivalAt) : null
+      arrivalAt: dto.arrivalAt ? new Date(dto.arrivalAt) : null,
     });
 
     await this.setStatusAndMaybeComplete(
       dto.visaCaseId,
       this.status.statusForFlightBooking(),
-      $Enums.VisaCaseStatus.FLIGHT_BOOKED
+      $Enums.VisaCaseStatus.FLIGHT_BOOKED,
+    );
+
+    const visaCase = await this.cases.findById(dto.visaCaseId);
+
+    const departureDate = dto.departureAt
+      ? new Date(dto.departureAt).toLocaleDateString()
+      : 'TBD';
+    const airline = dto.airline || 'TBD';
+
+    await this.sendNotificationToApplicant(
+      visaCase.applicantId,
+      NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+      'Flight Ticket Booked ✈️',
+      `Your flight has been booked. Airline: ${airline}, PNR: ${dto.pnr}, Departure: ${departureDate}`,
+    );
+
+    await this.sendNotificationToPartner(
+      visaCase.partnerId,
+      NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+      'Flight Booked for Candidate',
+      `Flight has been booked for candidate. Airline: ${airline}, PNR: ${dto.pnr}, Departure: ${departureDate}`,
     );
 
     return created;
@@ -299,10 +517,23 @@ export class VisasService {
 
     const created = await this.returns.create({
       visaCaseId: dto.visaCaseId,
-      reason: dto.reason
+      reason: dto.reason,
     });
 
-    await this.setStatusAndMaybeComplete(dto.visaCaseId, this.status.statusForReturn(), $Enums.VisaCaseStatus.RETURNED);
+    await this.setStatusAndMaybeComplete(
+      dto.visaCaseId,
+      this.status.statusForReturn(),
+      $Enums.VisaCaseStatus.RETURNED,
+    );
+
+    const visaCase = await this.cases.findById(dto.visaCaseId);
+
+    await this.sendNotificationToApplicant(
+      visaCase.applicantId,
+      NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+      'Visa Case Returned',
+      `Your visa case has been returned. Reason: ${dto.reason}`,
+    );
 
     return created;
   }
@@ -315,29 +546,50 @@ export class VisasService {
       throw new BadRequestException('Cannot deploy a closed case');
     }
 
-    await this.setStatusAndMaybeComplete(visaCaseId, this.status.statusForDeployed(), $Enums.VisaCaseStatus.DEPLOYED);
+    await this.setStatusAndMaybeComplete(
+      visaCaseId,
+      this.status.statusForDeployed(),
+      $Enums.VisaCaseStatus.DEPLOYED,
+    );
+
+    await this.sendNotificationToApplicant(
+      c.applicantId,
+      NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
+      'Deployment Confirmed',
+      'You have been deployed! Best wishes for your journey.',
+    );
 
     return this.cases.findById(visaCaseId);
   }
 
-  async adminCloseCase(_adminUserId: string, visaCaseId: string, dto: AdminCloseVisaCaseDto) {
+  async adminCloseCase(
+    _adminUserId: string,
+    visaCaseId: string,
+    dto: AdminCloseVisaCaseDto,
+  ) {
     const c = await this.getCaseOrThrow(visaCaseId);
     this.status.ensureCanClose(c.status);
 
-    if (dto.isActive !== false) throw new BadRequestException('Closing requires isActive=false');
+    if (dto.isActive !== false)
+      throw new BadRequestException('Closing requires isActive=false');
 
     const current = await this.prisma.visaCase.findUnique({
       where: { id: visaCaseId },
-      select: { completedStatuses: true }
+      select: { completedStatuses: true },
     });
     if (!current) throw new NotFoundException('Visa case not found');
 
-    const completedStatuses = Array.from(new Set([...(current.completedStatuses ?? []), $Enums.VisaCaseStatus.CLOSED]));
+    const completedStatuses = Array.from(
+      new Set([
+        ...(current.completedStatuses ?? []),
+        $Enums.VisaCaseStatus.CLOSED,
+      ]),
+    );
 
     return this.cases.update(visaCaseId, {
       isActive: false,
       status: this.status.statusForClosed(),
-      completedStatuses
+      completedStatuses,
     });
   }
 
@@ -347,12 +599,12 @@ export class VisasService {
     const r = await this.cases.listApplicant(
       { applicantId, status: q.status, isActive: q.isActive },
       this.page(q.page),
-      this.pageSize(q.pageSize, 20)
+      this.pageSize(q.pageSize, 20),
     );
 
     return {
       ...r,
-      items: r.items.map((x: any) => this.toCaseListItem(x))
+      items: r.items.map((x: any) => this.toCaseListItem(x)),
     };
   }
 
@@ -362,12 +614,12 @@ export class VisasService {
     const r = await this.cases.listEmployer(
       { employerId, jobId: q.jobId, status: q.status, isActive: q.isActive },
       this.page(q.page),
-      this.pageSize(q.pageSize, 50)
+      this.pageSize(q.pageSize, 50),
     );
 
     return {
       ...r,
-      items: r.items.map((x: any) => this.toCaseListItem(x))
+      items: r.items.map((x: any) => this.toCaseListItem(x)),
     };
   }
 
@@ -378,27 +630,42 @@ export class VisasService {
   }
 
   private async ensureApplicantExists(applicantId: string) {
-    const a = await this.prisma.applicantProfile.findUnique({ where: { applicantId }, select: { applicantId: true } });
+    const a = await this.prisma.applicantProfile.findUnique({
+      where: { applicantId },
+      select: { applicantId: true },
+    });
     if (!a) throw new NotFoundException('Applicant not found');
   }
 
   private async ensureEmployerExists(employerId: string) {
-    const e = await this.prisma.employer.findUnique({ where: { id: employerId }, select: { id: true } });
+    const e = await this.prisma.employer.findUnique({
+      where: { id: employerId },
+      select: { id: true },
+    });
     if (!e) throw new NotFoundException('Employer not found');
   }
 
   private async ensureJobExists(jobId: string) {
-    const j = await this.prisma.jobPosting.findUnique({ where: { id: jobId }, select: { id: true } });
+    const j = await this.prisma.jobPosting.findUnique({
+      where: { id: jobId },
+      select: { id: true },
+    });
     if (!j) throw new NotFoundException('Job not found');
   }
 
   private async ensureSponsorExists(sponsorId: string) {
-    const s = await this.prisma.sponsor.findUnique({ where: { id: sponsorId }, select: { id: true } });
+    const s = await this.prisma.sponsor.findUnique({
+      where: { id: sponsorId },
+      select: { id: true },
+    });
     if (!s) throw new NotFoundException('Sponsor not found');
   }
 
   private async ensureUserExists(userId: string) {
-    const u = await this.prisma.user.findUnique({ where: { id: userId }, select: { id: true } });
+    const u = await this.prisma.user.findUnique({
+      where: { id: userId },
+      select: { id: true },
+    });
     if (!u) throw new NotFoundException('User not found');
   }
 }

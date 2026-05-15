@@ -1,5 +1,21 @@
-import { Body, Controller, Get, Param, Post, Put, Query, UploadedFiles, UseInterceptors } from '@nestjs/common';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiQuery, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Param,
+  Post,
+  Put,
+  Query,
+  UploadedFiles,
+  UseInterceptors,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiQuery,
+  ApiTags,
+} from '@nestjs/swagger';
 import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import crypto from 'crypto';
@@ -12,7 +28,12 @@ import type { CurrentUser } from '../../../common/decorators/current-user.decora
 import { DraftUpsertApplicantDto } from '../dto/public/draft-upsert-applicant.dto';
 import { SubmitApplicantDto } from '../dto/public/submit-applicant.dto';
 import { ApplicantsService } from '../services/applicants.service';
-import { buildUploadsRoot, ensureDir, maxUploadBytes, safeExt } from '../../../common/utils/upload/upload.utils';
+import {
+  buildUploadsRoot,
+  ensureDir,
+  maxUploadBytes,
+  safeExt,
+} from '../../../common/utils/upload/upload.utils';
 
 function applicantDiskStorage() {
   return diskStorage({
@@ -28,11 +49,13 @@ function applicantDiskStorage() {
               ? 'ids'
               : file.fieldname === 'cocCertificateFile'
                 ? 'certificates'
-                : file.fieldname.startsWith('document_')
-                  ? 'documents'
-                  : file.fieldname.startsWith('emergencyId_')
-                    ? 'emergency-contacts'
-                    : 'misc';
+                : file.fieldname === 'document_CV'
+                  ? 'cvs'
+                  : file.fieldname.startsWith('document_')
+                    ? 'documents'
+                    : file.fieldname.startsWith('emergencyId_')
+                      ? 'emergency-contacts'
+                      : 'misc';
 
       const dest = join(root, 'applicants', subdir);
       ensureDir(dest);
@@ -42,7 +65,7 @@ function applicantDiskStorage() {
       const ext = safeExt(file.originalname);
       const name = crypto.randomBytes(16).toString('hex');
       cb(null, `${name}${ext}`);
-    }
+    },
   });
 }
 
@@ -54,7 +77,10 @@ export class AgentApplicantsController {
 
   @RequirePermissions('APPLICANT_CREATE')
   @Put()
-  @ApiOperation({ summary: 'Create/update applicant draft by Local Agency (supports multipart files)' })
+  @ApiOperation({
+    summary:
+      'Create/update applicant draft by Local Agency (supports multipart files)',
+  })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -67,20 +93,21 @@ export class AgentApplicantsController {
         { name: 'document_PERSONAL_PHOTO', maxCount: 1 },
         { name: 'document_COC_CERTIFICATE', maxCount: 1 },
         { name: 'document_APPLICANT_ID', maxCount: 1 },
+        { name: 'document_CV', maxCount: 1 },
         { name: 'emergencyId_0', maxCount: 1 },
         { name: 'emergencyId_1', maxCount: 1 },
-        { name: 'emergencyId_2', maxCount: 1 }
+        { name: 'emergencyId_2', maxCount: 1 },
       ],
       {
         limits: { fileSize: maxUploadBytes() },
-        storage: applicantDiskStorage()
-      }
-    )
+        storage: applicantDiskStorage(),
+      },
+    ),
   )
   upsert(
     @CurrentUserDecorator() user: CurrentUser,
     @Body() dto: DraftUpsertApplicantDto,
-    @UploadedFiles() files: Record<string, Express.Multer.File[]>
+    @UploadedFiles() files: Record<string, Express.Multer.File[]>,
   ) {
     const fileUrls: Record<string, string> = {};
 
@@ -88,7 +115,8 @@ export class AgentApplicantsController {
       const f = files[key]?.[0];
       if (!f) continue;
 
-      fileUrls[key] = `/uploads/applicants/${key.startsWith('emergencyId_')
+      fileUrls[key] = `/uploads/applicants/${
+        key.startsWith('emergencyId_')
           ? 'emergency-contacts'
           : key.startsWith('document_')
             ? 'documents'
@@ -100,32 +128,54 @@ export class AgentApplicantsController {
                   ? 'ids'
                   : key === 'cocCertificateFile'
                     ? 'certificates'
-                    : 'misc'
-        }/${f.filename}`;
+                    : key === 'document_CV'
+                      ? 'documents'
+                      : 'misc'
+      }/${f.filename}`;
     }
 
-    return this.applicants.agentDraftUpsertWithFiles(user.userId, dto, fileUrls);
+    return this.applicants.agentDraftUpsertWithFiles(
+      user.userId,
+      dto,
+      fileUrls,
+    );
   }
 
   @RequirePermissions('APPLICANT_VIEW')
   @Get()
   @ApiOperation({ summary: 'List applicants created by this Local Agency' })
-  @ApiQuery({ name: 'status', required: false, enum: ['DRAFT', 'SUBMITTED', 'REJECTED', 'VERIFIED'] })
+  @ApiQuery({
+    name: 'status',
+    required: false,
+    enum: ['DRAFT', 'SUBMITTED', 'REJECTED', 'VERIFIED'],
+  })
   @ApiQuery({ name: 'page', required: false, example: 1 })
   @ApiQuery({ name: 'pageSize', required: false, example: 50 })
   list(
     @CurrentUserDecorator() user: CurrentUser,
     @Query('status') status?: string,
     @Query('page') page?: string,
-    @Query('pageSize') pageSize?: string
+    @Query('pageSize') pageSize?: string,
   ) {
-    return this.applicants.agentList(user.userId, status, page ? Number(page) : 1, pageSize ? Number(pageSize) : 50);
+    return this.applicants.agentList(
+      user.userId,
+      status,
+      page ? Number(page) : 1,
+      pageSize ? Number(pageSize) : 50,
+    );
   }
 
   @RequirePermissions('APPLICANT_UPDATE')
   @Post(':applicantId/submit')
-  @ApiOperation({ summary: 'Submit applicant created by this Local Agency and create Applicant User (DRAFT/REJECTED → SUBMITTED)' })
-  submit(@CurrentUserDecorator() user: CurrentUser, @Param('applicantId') applicantId: string, @Body() dto: SubmitApplicantDto) {
+  @ApiOperation({
+    summary:
+      'Submit applicant created by this Local Agency and create Applicant User (DRAFT/REJECTED → SUBMITTED)',
+  })
+  submit(
+    @CurrentUserDecorator() user: CurrentUser,
+    @Param('applicantId') applicantId: string,
+    @Body() dto: SubmitApplicantDto,
+  ) {
     return this.applicants.agentSubmit(user.userId, applicantId, dto.password);
   }
 }

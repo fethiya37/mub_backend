@@ -1,5 +1,17 @@
-import { Body, Controller, Get, Put, UploadedFiles, UseInterceptors } from '@nestjs/common';
-import { ApiBearerAuth, ApiConsumes, ApiOperation, ApiTags } from '@nestjs/swagger';
+import {
+  Body,
+  Controller,
+  Get,
+  Put,
+  UploadedFiles,
+  UseInterceptors,
+} from '@nestjs/common';
+import {
+  ApiBearerAuth,
+  ApiConsumes,
+  ApiOperation,
+  ApiTags,
+} from '@nestjs/swagger';
 import { RequirePermissions } from '../../../common/decorators/require-permissions.decorator';
 import { CurrentUserDecorator } from '../../../common/decorators/current-user.decorator';
 import type { CurrentUser } from '../../../common/decorators/current-user.decorator';
@@ -10,7 +22,12 @@ import { FileFieldsInterceptor } from '@nestjs/platform-express';
 import { diskStorage } from 'multer';
 import crypto from 'crypto';
 import { join } from 'path';
-import { buildUploadsRoot, ensureDir, maxUploadBytes, safeExt } from '../../../common/utils/upload/upload.utils';
+import {
+  buildUploadsRoot,
+  ensureDir,
+  maxUploadBytes,
+  safeExt,
+} from '../../../common/utils/upload/upload.utils';
 
 function applicantDiskStorage() {
   return diskStorage({
@@ -26,7 +43,9 @@ function applicantDiskStorage() {
               ? 'ids'
               : file.fieldname === 'cocCertificateFile'
                 ? 'certificates'
-                : 'misc';
+                : file.fieldname === 'document_CV'
+                  ? 'cvs'
+                  : 'misc';
 
       const dest = join(root, 'applicants', subdir);
       ensureDir(dest);
@@ -36,7 +55,7 @@ function applicantDiskStorage() {
       const ext = safeExt(file.originalname);
       const name = crypto.randomBytes(16).toString('hex');
       cb(null, `${name}${ext}`);
-    }
+    },
   });
 }
 
@@ -53,7 +72,7 @@ function parseJsonArray<T>(v: any): T[] | undefined {
 export class ApplicantProfileController {
   constructor(
     private readonly verified: ApplicantVerifiedService,
-    private readonly profiles: ApplicantProfileRepository
+    private readonly profiles: ApplicantProfileRepository,
   ) {}
 
   @RequirePermissions('APPLICANT_SELF_VIEW')
@@ -66,7 +85,9 @@ export class ApplicantProfileController {
 
   @RequirePermissions('APPLICANT_SELF_UPDATE')
   @Put('profile')
-  @ApiOperation({ summary: 'Update my profile (VERIFIED) (supports multipart files)' })
+  @ApiOperation({
+    summary: 'Update my profile (VERIFIED) (supports multipart files)',
+  })
   @ApiConsumes('multipart/form-data')
   @UseInterceptors(
     FileFieldsInterceptor(
@@ -74,18 +95,19 @@ export class ApplicantProfileController {
         { name: 'personalPhoto', maxCount: 1 },
         { name: 'passportFile', maxCount: 1 },
         { name: 'applicantIdFile', maxCount: 1 },
-        { name: 'cocCertificateFile', maxCount: 1 }
+        { name: 'cocCertificateFile', maxCount: 1 },
+        { name: 'document_CV', maxCount: 1 },
       ],
       {
         limits: { fileSize: maxUploadBytes() },
-        storage: applicantDiskStorage()
-      }
-    )
+        storage: applicantDiskStorage(),
+      },
+    ),
   )
   async update(
     @CurrentUserDecorator() user: CurrentUser,
     @Body() dto: UpdateVerifiedApplicantDto,
-    @UploadedFiles() files: Record<string, Express.Multer.File[]>
+    @UploadedFiles() files: Record<string, Express.Multer.File[]>,
   ) {
     const skills = parseJsonArray(dto.skills as any);
     const qualifications = parseJsonArray(dto.qualifications as any);
@@ -97,19 +119,24 @@ export class ApplicantProfileController {
       skills,
       qualifications,
       workExperiences,
-      documents
+      documents,
     };
 
     const fileUrls: Record<string, string> = {};
     for (const key of Object.keys(files || {})) {
       const f = files[key]?.[0];
       if (!f) continue;
-      fileUrls[key] = `/uploads/applicants/${key === 'personalPhoto' ? 'photos' : key === 'passportFile' ? 'passport' : key === 'applicantIdFile' ? 'ids' : key === 'cocCertificateFile' ? 'certificates' : 'misc'}/${f.filename}`;
+      fileUrls[key] = `/uploads/applicants/${key === 'personalPhoto' ? 'photos' : key === 'passportFile' ? 'passport' : key === 'applicantIdFile' ? 'ids' : key === 'cocCertificateFile' ? 'certificates' : key === 'document_CV' ? 'cvs' : 'misc'}/${f.filename}`;
     }
 
     const profile = await this.profiles.findByUserId(user.userId);
     const current = profile ?? (await this.verified.getByUserId(user.userId));
 
-    return this.verified.updateVerifiedWithFiles(current.applicantId, resolvedDto, current.profileStatus, fileUrls);
+    return this.verified.updateVerifiedWithFiles(
+      current.applicantId,
+      resolvedDto,
+      current.profileStatus,
+      fileUrls,
+    );
   }
 }

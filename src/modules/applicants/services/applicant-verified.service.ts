@@ -7,7 +7,10 @@ type FileUrlsMap = Record<string, string>;
 
 @Injectable()
 export class ApplicantVerifiedService {
-  constructor(private readonly profiles: ApplicantProfileRepository, private readonly status: ApplicantStatusService) {}
+  constructor(
+    private readonly profiles: ApplicantProfileRepository,
+    private readonly status: ApplicantStatusService,
+  ) {}
 
   private ensureArray<T>(v: any): T[] {
     if (!v) return [];
@@ -33,9 +36,13 @@ export class ApplicantVerifiedService {
       if (!url) continue;
 
       if (key === 'passportFile') this.upsertDoc(docs, 'PASSPORT', url);
-      else if (key === 'personalPhoto') this.upsertDoc(docs, 'PERSONAL_PHOTO', url);
-      else if (key === 'cocCertificateFile') this.upsertDoc(docs, 'COC_CERTIFICATE', url);
-      else if (key === 'applicantIdFile') this.upsertDoc(docs, 'APPLICANT_ID', url);
+      else if (key === 'personalPhoto')
+        this.upsertDoc(docs, 'PERSONAL_PHOTO', url);
+      else if (key === 'cocCertificateFile')
+        this.upsertDoc(docs, 'COC_CERTIFICATE', url);
+      else if (key === 'applicantIdFile')
+        this.upsertDoc(docs, 'APPLICANT_ID', url);
+      else if (key === 'document_CV') this.upsertDoc(docs, 'CV', url);
       else if (key.startsWith('document_')) {
         const t = key.slice('document_'.length);
         if (t) this.upsertDoc(docs, t, url);
@@ -47,17 +54,22 @@ export class ApplicantVerifiedService {
     return next;
   }
 
-  private collectOldPathsToDelete(existing: any, nextDto: any, fileUrls: FileUrlsMap) {
+  private collectOldPathsToDelete(
+    existing: any,
+    nextDto: any,
+    fileUrls: FileUrlsMap,
+  ) {
     const paths: string[] = [];
     const oldDocs = this.ensureArray<any>(existing?.documents);
 
-    const getOldDocUrl = (t: string) => (oldDocs.find((d) => String(d?.documentType) === t)?.fileUrl ?? null) as
-      | string
-      | null;
-    const getNewDocUrl = (t: string) =>
-      (this.ensureArray<any>(nextDto?.documents).find((d) => String(d?.documentType) === t)?.fileUrl ?? null) as
+    const getOldDocUrl = (t: string) =>
+      (oldDocs.find((d) => String(d?.documentType) === t)?.fileUrl ?? null) as
         | string
         | null;
+    const getNewDocUrl = (t: string) =>
+      (this.ensureArray<any>(nextDto?.documents).find(
+        (d) => String(d?.documentType) === t,
+      )?.fileUrl ?? null) as string | null;
 
     const considerDocType = (t: string) => {
       const oldUrl = getOldDocUrl(t);
@@ -70,6 +82,7 @@ export class ApplicantVerifiedService {
       else if (key === 'personalPhoto') considerDocType('PERSONAL_PHOTO');
       else if (key === 'cocCertificateFile') considerDocType('COC_CERTIFICATE');
       else if (key === 'applicantIdFile') considerDocType('APPLICANT_ID');
+      else if (key === 'document_CV') considerDocType('CV');
       else if (key.startsWith('document_')) {
         const t = key.slice('document_'.length);
         if (t) considerDocType(t);
@@ -85,40 +98,52 @@ export class ApplicantVerifiedService {
     throw new BadRequestException('Applicant profile not found for user');
   }
 
-  async updateVerifiedWithFiles(applicantId: string, dto: any, existingStatus: string, fileUrls: FileUrlsMap) {
+  async updateVerifiedWithFiles(
+    applicantId: string,
+    dto: any,
+    existingStatus: string,
+    fileUrls: FileUrlsMap,
+  ) {
     this.status.ensureVerified(existingStatus);
 
     const existing = await this.profiles.findById(applicantId);
     if (!existing) throw new BadRequestException('Applicant not found');
 
     const dtoWithFiles = this.applyFilesToDto(dto, fileUrls);
-    const oldToDelete = this.collectOldPathsToDelete(existing, dtoWithFiles, fileUrls);
+    const oldToDelete = this.collectOldPathsToDelete(
+      existing,
+      dtoWithFiles,
+      fileUrls,
+    );
 
     const patch: any = {
       email: dtoWithFiles.email ?? undefined,
       address: dtoWithFiles.address ?? undefined,
       maritalStatus: dtoWithFiles.maritalStatus ?? undefined,
-      occupation: dtoWithFiles.occupation ?? undefined
+      occupation: dtoWithFiles.occupation ?? undefined,
     };
 
     if (dtoWithFiles.skills)
       patch.skills = dtoWithFiles.skills.map((s: any) => ({
         skillId: s.skillId,
         hasSkill: s.hasSkill ?? true,
-        willingToLearn: s.willingToLearn ?? false
+        willingToLearn: s.willingToLearn ?? false,
       }));
 
     if (dtoWithFiles.qualifications)
-      patch.qualifications = dtoWithFiles.qualifications.map((q: any) => ({ qualification: q.qualification }));
+      patch.qualifications = dtoWithFiles.qualifications.map((q: any) => ({
+        qualification: q.qualification,
+      }));
 
     if (dtoWithFiles.workExperiences)
       patch.workExperiences = dtoWithFiles.workExperiences.map((w: any) => ({
         jobTitle: w.jobTitle,
         country: w.country ?? null,
-        yearsWorked: w.yearsWorked ?? null
+        yearsWorked: w.yearsWorked ?? null,
       }));
 
-    if (dtoWithFiles.documents) patch.documents = dtoWithFiles.documents.map((d: any) => ({ ...d }));
+    if (dtoWithFiles.documents)
+      patch.documents = dtoWithFiles.documents.map((d: any) => ({ ...d }));
 
     const updated = await this.profiles.updateVerified(applicantId, patch);
 

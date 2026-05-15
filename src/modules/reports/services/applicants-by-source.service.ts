@@ -40,7 +40,7 @@ export class ApplicantsBySourceService {
 
     if (ApplicantsBySourceValues.includes(src as any)) return src as ApplicantsBySourceValue;
 
-    throw new BadRequestException('Invalid source. Allowed: SELF | AGENCY | MUB_STAFF');
+    throw new BadRequestException('Invalid source. Allowed: SELF | AGENCY | STAFF');
   }
 
   private buildCreatedAtWhere(q: ApplicantsBySourceQueryDto) {

@@ -1,8 +1,15 @@
-import { BadRequestException, ForbiddenException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ForbiddenException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { PrismaService } from '../../../database/prisma.service';
 
 import { JobApplicationRepository } from '../repositories/job-application.repository';
 import { JobApplicationStatusService } from './job-application-status.service';
+import { NotificationsService } from '../../notifications/services/notifications.service';
+import { NOTIFICATION_TYPES } from '../../notifications/constants/notification-types.constant';
 
 import type { ApplyJobDto } from '../dto/applicant/apply-job.dto';
 import type { UpdateCvDto } from '../dto/applicant/update-cv.dto';
@@ -25,7 +32,8 @@ export class JobApplicationsService {
   constructor(
     private readonly prisma: PrismaService,
     private readonly repo: JobApplicationRepository,
-    private readonly status: JobApplicationStatusService
+    private readonly status: JobApplicationStatusService,
+    private readonly notifications: NotificationsService,
   ) {}
 
   private page(v?: number) {
@@ -45,21 +53,30 @@ export class JobApplicationsService {
   private async getApplicantIdByUserId(userId: string) {
     const applicant = await this.prisma.applicantProfile.findFirst({
       where: { userId },
-      select: { applicantId: true }
+      select: { applicantId: true },
     });
 
     if (!applicant) throw new NotFoundException('Applicant profile not found');
     return applicant.applicantId;
   }
 
+  private async getApplicantUserId(applicantId: string) {
+    const applicant = await this.prisma.applicantProfile.findUnique({
+      where: { applicantId },
+      select: { userId: true },
+    });
+    return applicant?.userId ?? null;
+  }
+
   private async getEmployerIdByUserId(userId: string) {
     const employer = await this.prisma.employer.findFirst({
       where: { userId },
-      select: { id: true, status: true }
+      select: { id: true, status: true },
     });
 
     if (!employer) throw new NotFoundException('Employer not found');
-    if (employer.status !== 'APPROVED') throw new BadRequestException('Employer not approved');
+    if (employer.status !== 'APPROVED')
+      throw new BadRequestException('Employer not approved');
     return employer.id;
   }
 
@@ -68,28 +85,50 @@ export class JobApplicationsService {
 
     const job = await this.prisma.jobPosting.findUnique({
       where: { id: dto.jobPostingId },
-      select: { id: true, status: true }
+      include: {
+        employer: { select: { userId: true, organizationName: true } },
+      },
     });
 
     if (!job) throw new NotFoundException('Job not found');
-    if (job.status !== 'ACTIVE') throw new BadRequestException('Job is not open for applications');
+    if (job.status !== 'ACTIVE')
+      throw new BadRequestException('Job is not open for applications');
 
-    const existing = await this.repo.findByApplicantJob(applicantId, dto.jobPostingId);
+    const existing = await this.repo.findByApplicantJob(
+      applicantId,
+      dto.jobPostingId,
+    );
     this.status.ensureCanApply(existing?.status ?? null);
 
-    return this.repo.applyOrReapply({
+    const result = await this.repo.applyOrReapply({
       applicantId,
       jobPostingId: dto.jobPostingId,
-      cvFileUrl: this.requireCvFileUrl(dto.cvFileUrl)
+      cvFileUrl: this.requireCvFileUrl(dto.cvFileUrl),
     });
+
+    if (job.employer?.userId) {
+      await this.notifications.create(
+        job.employer.userId,
+        NOTIFICATION_TYPES.JOB_APPLICATION_RECEIVED,
+        'New Job Application Received',
+        `A candidate has applied for "${job.jobTitle}"`,
+      );
+    }
+
+    return result;
   }
 
-  async updateCvAsApplicant(userId: string, applicationId: string, dto: UpdateCvDto) {
+  async updateCvAsApplicant(
+    userId: string,
+    applicationId: string,
+    dto: UpdateCvDto,
+  ) {
     const applicantId = await this.getApplicantIdByUserId(userId);
 
     const app = await this.repo.findById(applicationId);
     if (!app) throw new NotFoundException('Application not found');
-    if (app.applicantId !== applicantId) throw new ForbiddenException('Not allowed');
+    if (app.applicantId !== applicantId)
+      throw new ForbiddenException('Not allowed');
 
     this.status.ensureCvEditable(app.status);
 
@@ -103,12 +142,17 @@ export class JobApplicationsService {
     return updated;
   }
 
-  async withdrawAsApplicant(userId: string, applicationId: string, dto: WithdrawApplicationDto) {
+  async withdrawAsApplicant(
+    userId: string,
+    applicationId: string,
+    dto: WithdrawApplicationDto,
+  ) {
     const applicantId = await this.getApplicantIdByUserId(userId);
 
     const app = await this.repo.findById(applicationId);
     if (!app) throw new NotFoundException('Application not found');
-    if (app.applicantId !== applicantId) throw new ForbiddenException('Not allowed');
+    if (app.applicantId !== applicantId)
+      throw new ForbiddenException('Not allowed');
 
     this.status.ensureWithdrawAllowed(app.status);
 
@@ -121,45 +165,79 @@ export class JobApplicationsService {
       applicantId,
       { status: q.status, jobPostingId: q.jobPostingId },
       this.page(q.page),
-      this.pageSize(q.pageSize, 20)
+      this.pageSize(q.pageSize, 20),
     );
   }
 
   async createAsAdmin(adminUserId: string, dto: AdminCreateApplicationDto) {
     const job = await this.prisma.jobPosting.findUnique({
       where: { id: dto.jobPostingId },
-      select: { id: true, status: true }
+      include: {
+        employer: { select: { userId: true, organizationName: true } },
+      },
     });
 
     if (!job) throw new NotFoundException('Job not found');
-    if (job.status !== 'ACTIVE') throw new BadRequestException('Job is not open for applications');
+    if (job.status !== 'ACTIVE')
+      throw new BadRequestException('Job is not open for applications');
 
     const applicant = await this.prisma.applicantProfile.findUnique({
       where: { applicantId: dto.applicantId },
-      select: { applicantId: true }
+      select: { applicantId: true, userId: true },
     });
 
     if (!applicant) throw new NotFoundException('Applicant not found');
 
-    const existing = await this.repo.findByApplicantJob(dto.applicantId, dto.jobPostingId);
+    const existing = await this.repo.findByApplicantJob(
+      dto.applicantId,
+      dto.jobPostingId,
+    );
     this.status.ensureCanApply(existing?.status ?? null);
 
-    return this.repo.applyOrReapply({
+    const result = await this.repo.applyOrReapply({
       applicantId: dto.applicantId,
       jobPostingId: dto.jobPostingId,
-      cvFileUrl: this.requireCvFileUrl(dto.cvFileUrl)
+      cvFileUrl: this.requireCvFileUrl(dto.cvFileUrl),
     });
+
+    if (applicant.userId) {
+      await this.notifications.create(
+        applicant.userId,
+        NOTIFICATION_TYPES.JOB_APPLICATION_RECEIVED,
+        'Application Submitted',
+        `An admin submitted an application for you to "${job.jobTitle}"`,
+      );
+    }
+
+    if (job.employer?.userId) {
+      await this.notifications.create(
+        job.employer.userId,
+        NOTIFICATION_TYPES.JOB_APPLICATION_RECEIVED,
+        'New Job Application Received',
+        `A candidate has applied for "${job.jobTitle}"`,
+      );
+    }
+
+    return result;
   }
 
   listAdminApplications(q: AdminListApplicationsQueryDto) {
     return this.repo.listAdmin(
-      { status: q.status, jobPostingId: q.jobPostingId, applicantId: q.applicantId },
+      {
+        status: q.status,
+        jobPostingId: q.jobPostingId,
+        applicantId: q.applicantId,
+      },
       this.page(q.page),
-      this.pageSize(q.pageSize, 50)
+      this.pageSize(q.pageSize, 50),
     );
   }
 
-  async updateCvAsAdmin(adminUserId: string, applicationId: string, dto: AdminUpdateCvDto) {
+  async updateCvAsAdmin(
+    adminUserId: string,
+    applicationId: string,
+    dto: AdminUpdateCvDto,
+  ) {
     const app = await this.repo.findById(applicationId);
     if (!app) throw new NotFoundException('Application not found');
 
@@ -175,59 +253,145 @@ export class JobApplicationsService {
     return updated;
   }
 
-  async approveAsAdmin(adminUserId: string, applicationId: string, dto: AdminApproveApplicationDto) {
+  async approveAsAdmin(
+    adminUserId: string,
+    applicationId: string,
+    dto: AdminApproveApplicationDto,
+  ) {
     const app = await this.repo.findById(applicationId);
     if (!app) throw new NotFoundException('Application not found');
 
     this.status.ensureAdminCanApprove(app.status);
 
-    return this.repo.setStatus(applicationId, 'APPROVED');
+    const result = await this.repo.setStatus(applicationId, 'APPROVED');
+
+    const job = await this.prisma.jobPosting.findUnique({
+      where: { id: app.jobPostingId },
+      include: { employer: { select: { userId: true } } },
+    });
+
+    const applicantUserId = await this.getApplicantUserId(app.applicantId);
+
+    if (applicantUserId) {
+      await this.notifications.create(
+        applicantUserId,
+        NOTIFICATION_TYPES.JOB_APPLICATION_STATUS_CHANGE,
+        'Application Approved',
+        `Your application for "${job?.jobTitle}" has been approved and forwarded to the employer`,
+      );
+    }
+
+    if (job?.employer?.userId) {
+      await this.notifications.create(
+        job.employer.userId,
+        NOTIFICATION_TYPES.JOB_APPLICATION_STATUS_CHANGE,
+        'Application Ready for Review',
+        `An application for "${job.jobTitle}" is ready for your decision`,
+      );
+    }
+
+    return result;
   }
 
-  async rejectAsAdmin(adminUserId: string, applicationId: string, dto: AdminRejectApplicationDto) {
+  async rejectAsAdmin(
+    adminUserId: string,
+    applicationId: string,
+    dto: AdminRejectApplicationDto,
+  ) {
     const app = await this.repo.findById(applicationId);
     if (!app) throw new NotFoundException('Application not found');
 
     this.status.ensureAdminCanReject(app.status);
 
-    return this.repo.setStatus(applicationId, 'REJECTED');
+    const result = await this.repo.setStatus(applicationId, 'REJECTED');
+
+    const job = await this.prisma.jobPosting.findUnique({
+      where: { id: app.jobPostingId },
+      select: { jobTitle: true },
+    });
+
+    const applicantUserId = await this.getApplicantUserId(app.applicantId);
+
+    if (applicantUserId) {
+      await this.notifications.create(
+        applicantUserId,
+        NOTIFICATION_TYPES.JOB_APPLICATION_STATUS_CHANGE,
+        'Application Rejected',
+        `Your application for "${job?.jobTitle}" was rejected by admin`,
+      );
+    }
+
+    return result;
   }
 
-  async listEmployerApplications(userId: string, q: EmployerListApplicationsQueryDto) {
+  async listEmployerApplications(
+    userId: string,
+    q: EmployerListApplicationsQueryDto,
+  ) {
     const employerId = await this.getEmployerIdByUserId(userId);
 
     return this.repo.listEmployer(
       { employerId, status: q.status, jobPostingId: q.jobPostingId },
       this.page(q.page),
-      this.pageSize(q.pageSize, 50)
+      this.pageSize(q.pageSize, 50),
     );
   }
 
-  async decideAsEmployer(userId: string, applicationId: string, dto: EmployerDecideApplicationDto) {
+  async decideAsEmployer(
+    userId: string,
+    applicationId: string,
+    dto: EmployerDecideApplicationDto,
+  ) {
     const employerId = await this.getEmployerIdByUserId(userId);
 
     const app = await this.prisma.jobApplication.findUnique({
       where: { id: applicationId },
-      select: { id: true, status: true, jobPostingId: true }
+      select: { id: true, status: true, jobPostingId: true, applicantId: true },
     });
 
     if (!app) throw new NotFoundException('Application not found');
 
     const job = await this.prisma.jobPosting.findUnique({
       where: { id: app.jobPostingId },
-      select: { employerId: true }
+      include: {
+        employer: { select: { userId: true, organizationName: true } },
+      },
     });
 
     if (!job) throw new NotFoundException('Job not found');
-    if (job.employerId !== employerId) throw new ForbiddenException('Not allowed');
+    if (job.employerId !== employerId)
+      throw new ForbiddenException('Not allowed');
 
     this.status.ensureEmployerCanDecide(app.status);
 
+    const applicantUserId = await this.getApplicantUserId(app.applicantId);
+
     if (dto.decision === 'SELECT') {
-      return this.repo.setStatus(applicationId, 'SELECTED');
+      const result = await this.repo.setStatus(applicationId, 'SELECTED');
+
+      if (applicantUserId) {
+        await this.notifications.create(
+          applicantUserId,
+          NOTIFICATION_TYPES.JOB_APPLICATION_STATUS_CHANGE,
+          'Congratulations! You Have Been Selected! 🎉',
+          `The employer has selected you for "${job.jobTitle}"`,
+        );
+      }
+
+      return result;
     }
 
-    this.status.ensureEmployerRejectHasReason(dto.reason);
-    return this.repo.setStatus(applicationId, 'REJECTED');
+    const result = await this.repo.setStatus(applicationId, 'REJECTED');
+
+    if (applicantUserId) {
+      await this.notifications.create(
+        applicantUserId,
+        NOTIFICATION_TYPES.JOB_APPLICATION_STATUS_CHANGE,
+        'Application Update',
+        `The employer has rejected your application for "${job.jobTitle}"`,
+      );
+    }
+
+    return result;
   }
 }

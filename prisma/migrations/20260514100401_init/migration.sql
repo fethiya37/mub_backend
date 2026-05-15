@@ -14,10 +14,10 @@ CREATE TYPE "LocalAgencyApprovalAction" AS ENUM ('APPROVED', 'REJECTED', 'SUSPEN
 CREATE TYPE "ApplicantProfileStatus" AS ENUM ('DRAFT', 'SUBMITTED', 'VERIFIED', 'REJECTED');
 
 -- CreateEnum
-CREATE TYPE "ApplicantDocumentType" AS ENUM ('PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE', 'APPLICANT_ID', 'OTHER');
+CREATE TYPE "ApplicantDocumentType" AS ENUM ('PASSPORT', 'PERSONAL_PHOTO', 'COC_CERTIFICATE', 'APPLICANT_ID', 'CV', 'OTHER');
 
 -- CreateEnum
-CREATE TYPE "ApplicantRegistrationSource" AS ENUM ('SELF', 'AGENCY', 'MUB_STAFF');
+CREATE TYPE "ApplicantRegistrationSource" AS ENUM ('SELF', 'AGENCY', 'STAFF');
 
 -- CreateEnum
 CREATE TYPE "EmployerStatus" AS ENUM ('PENDING', 'APPROVED', 'REJECTED', 'SUSPENDED');
@@ -565,6 +565,29 @@ CREATE TABLE "ApplicantExpense" (
     CONSTRAINT "ApplicantExpense_pkey" PRIMARY KEY ("id")
 );
 
+-- CreateTable
+CREATE TABLE "Notification" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "type" TEXT NOT NULL,
+    "title" TEXT NOT NULL,
+    "message" TEXT NOT NULL,
+    "isRead" BOOLEAN NOT NULL DEFAULT false,
+    "createdAt" TIMESTAMP(3) NOT NULL DEFAULT CURRENT_TIMESTAMP,
+
+    CONSTRAINT "Notification_pkey" PRIMARY KEY ("id")
+);
+
+-- CreateTable
+CREATE TABLE "NotificationPreference" (
+    "id" TEXT NOT NULL,
+    "userId" TEXT NOT NULL,
+    "emailEnabled" BOOLEAN NOT NULL DEFAULT true,
+    "inAppEnabled" BOOLEAN NOT NULL DEFAULT true,
+
+    CONSTRAINT "NotificationPreference_pkey" PRIMARY KEY ("id")
+);
+
 -- CreateIndex
 CREATE UNIQUE INDEX "User_email_key" ON "User"("email");
 
@@ -862,6 +885,18 @@ CREATE INDEX "ApplicantExpense_expenseDate_idx" ON "ApplicantExpense"("expenseDa
 -- CreateIndex
 CREATE INDEX "ApplicantExpense_createdBy_idx" ON "ApplicantExpense"("createdBy");
 
+-- CreateIndex
+CREATE INDEX "Notification_userId_idx" ON "Notification"("userId");
+
+-- CreateIndex
+CREATE INDEX "Notification_isRead_idx" ON "Notification"("isRead");
+
+-- CreateIndex
+CREATE INDEX "Notification_createdAt_idx" ON "Notification"("createdAt");
+
+-- CreateIndex
+CREATE UNIQUE INDEX "NotificationPreference_userId_key" ON "NotificationPreference"("userId");
+
 -- AddForeignKey
 ALTER TABLE "RolePermission" ADD CONSTRAINT "RolePermission_roleId_fkey" FOREIGN KEY ("roleId") REFERENCES "Role"("id") ON DELETE CASCADE ON UPDATE CASCADE;
 
@@ -981,3 +1016,9 @@ ALTER TABLE "ApplicantExpense" ADD CONSTRAINT "ApplicantExpense_applicantId_fkey
 
 -- AddForeignKey
 ALTER TABLE "ApplicantExpense" ADD CONSTRAINT "ApplicantExpense_typeId_fkey" FOREIGN KEY ("typeId") REFERENCES "ApplicantExpenseType"("id") ON DELETE SET NULL ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "Notification" ADD CONSTRAINT "Notification_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;
+
+-- AddForeignKey
+ALTER TABLE "NotificationPreference" ADD CONSTRAINT "NotificationPreference_userId_fkey" FOREIGN KEY ("userId") REFERENCES "User"("id") ON DELETE CASCADE ON UPDATE CASCADE;

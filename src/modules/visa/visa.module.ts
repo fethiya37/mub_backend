@@ -1,5 +1,6 @@
 import { Module } from '@nestjs/common';
 import { PrismaService } from '../../database/prisma.service';
+import { NotificationsModule } from '../notifications/notifications.module';
 
 import { AdminVisaController } from './presentation/admin-visa.controller';
 import { ApplicantVisaController } from './presentation/applicant-visa.controller';
@@ -36,7 +37,14 @@ import { VisaReturnPrismaRepository } from './prisma/visa-return.prisma-reposito
 import { AdminSponsorsController } from './presentation/admin-sponsors.controller';
 
 @Module({
-  controllers: [AdminVisaController, ApplicantVisaController, EmployerVisasController, AgencyVisasController, AdminSponsorsController],
+  imports: [NotificationsModule],
+  controllers: [
+    AdminVisaController,
+    ApplicantVisaController,
+    EmployerVisasController,
+    AgencyVisasController,
+    AdminSponsorsController,
+  ],
   providers: [
     PrismaService,
 
@@ -49,14 +57,26 @@ import { AdminSponsorsController } from './presentation/admin-sponsors.controlle
     { provide: SponsorRepository, useClass: SponsorPrismaRepository },
     { provide: VisaCaseRepository, useClass: VisaCasePrismaRepository },
     { provide: VisaMedicalRepository, useClass: VisaMedicalPrismaRepository },
-    { provide: VisaInsuranceRepository, useClass: VisaInsurancePrismaRepository },
-    { provide: VisaFingerprintRepository, useClass: VisaFingerprintPrismaRepository },
-    { provide: EmbassyProcessRepository, useClass: EmbassyProcessPrismaRepository },
+    {
+      provide: VisaInsuranceRepository,
+      useClass: VisaInsurancePrismaRepository,
+    },
+    {
+      provide: VisaFingerprintRepository,
+      useClass: VisaFingerprintPrismaRepository,
+    },
+    {
+      provide: EmbassyProcessRepository,
+      useClass: EmbassyProcessPrismaRepository,
+    },
     { provide: LMISProcessRepository, useClass: LMISProcessPrismaRepository },
     { provide: VisaAttemptRepository, useClass: VisaAttemptPrismaRepository },
-    { provide: FlightBookingRepository, useClass: FlightBookingPrismaRepository },
-    { provide: VisaReturnRepository, useClass: VisaReturnPrismaRepository }
+    {
+      provide: FlightBookingRepository,
+      useClass: FlightBookingPrismaRepository,
+    },
+    { provide: VisaReturnRepository, useClass: VisaReturnPrismaRepository },
   ],
-  exports: [VisasService]
+  exports: [VisasService],
 })
 export class VisaModule {}

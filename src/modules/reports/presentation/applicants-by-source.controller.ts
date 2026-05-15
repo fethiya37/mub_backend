@@ -13,14 +13,18 @@ export class ApplicantsBySourceController {
 
   @RequirePermissions('REPORT_VIEW')
   @Get('count')
-  @ApiOperation({ summary: 'Count applicants by source (SELF | AGENCY | MUB_STAFF)' })
+  @ApiOperation({
+    summary: 'Count applicants by source (SELF | AGENCY | STAFF)',
+  })
   count(@Query() q: ApplicantsBySourceQueryDto) {
     return this.report.count(q);
   }
 
   @RequirePermissions('REPORT_VIEW')
   @Get('creators')
-  @ApiOperation({ summary: 'Creator breakdown for a source with creator user names' })
+  @ApiOperation({
+    summary: 'Creator breakdown for a source with creator user names',
+  })
   creators(@Query() q: ApplicantsBySourceQueryDto) {
     return this.report.creators(q);
   }
