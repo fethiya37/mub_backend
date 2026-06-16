@@ -1,37 +1,53 @@
 import { Injectable, NotFoundException } from '@nestjs/common';
 import { SponsorRepository } from '../repositories/sponsor.repository';
-import type { AdminUpsertSponsorDto } from '../dto/admin/admin-upsert-sponsor.dto';
+import { AdminUpsertSponsorDto } from '../dto/admin/admin-upsert-sponsor.dto';
 
 @Injectable()
 export class SponsorsService {
-  constructor(private readonly sponsors: SponsorRepository) {}
+  constructor(private readonly sponsorRepo: SponsorRepository) {}
 
-  create(dto: AdminUpsertSponsorDto) {
-    return this.sponsors.create({
+  async create(dto: AdminUpsertSponsorDto, sponsorIdFileUrl?: string) {
+    return this.sponsorRepo.create({
       fullName: dto.fullName,
-      sponsorIdFileUrl: dto.sponsorIdFileUrl ?? null,
-      phone: dto.phone ?? null
+      iqamaNumber: dto.iqamaNumber,
+      employerId: dto.employerId,
+      phone: dto.phone ?? null,
+      sponsorIdFileUrl: sponsorIdFileUrl ?? null,
     });
   }
 
-  async update(id: string, dto: AdminUpsertSponsorDto) {
-    const existing = await this.sponsors.findById(id);
+  async update(
+    id: string,
+    dto: AdminUpsertSponsorDto,
+    sponsorIdFileUrl?: string,
+  ) {
+    const existing = await this.sponsorRepo.findById(id);
     if (!existing) throw new NotFoundException('Sponsor not found');
 
-    return this.sponsors.update(id, {
+    return this.sponsorRepo.update(id, {
       fullName: dto.fullName,
-      sponsorIdFileUrl: dto.sponsorIdFileUrl ?? null,
-      phone: dto.phone ?? null
+      iqamaNumber: dto.iqamaNumber,
+      employerId: dto.employerId,
+      phone: dto.phone ?? null,
+      sponsorIdFileUrl: sponsorIdFileUrl ?? existing.sponsorIdFileUrl,
     });
   }
 
   async get(id: string) {
-    const sponsor = await this.sponsors.findById(id);
+    const sponsor = await this.sponsorRepo.findById(id);
     if (!sponsor) throw new NotFoundException('Sponsor not found');
     return sponsor;
   }
 
-  list(filters: { q?: string }, page: number, pageSize: number) {
-    return this.sponsors.list({ q: filters.q }, page, pageSize);
+  async list(
+    filters: { q?: string; employerId?: string },
+    page: number,
+    pageSize: number,
+  ) {
+    return this.sponsorRepo.list(filters, page, pageSize);
+  }
+
+  async getSponsorsByEmployer(employerId: string) {
+    return this.sponsorRepo.findByEmployerId(employerId);
   }
 }

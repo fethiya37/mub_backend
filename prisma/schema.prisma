@@ -4,7 +4,6 @@ generator client {
 
 datasource db {
   provider = "postgresql"
-  
 }
 
 enum UserStatus {
@@ -12,7 +11,6 @@ enum UserStatus {
   APPROVED
   REJECTED
 }
-
 
 model User {
   id                String  @id @default(uuid())
@@ -49,8 +47,6 @@ model User {
   notifications           Notification[]
   notificationPreferences NotificationPreference?
 }
-
-
 
 model Role {
   id          String   @id @default(uuid())
@@ -456,6 +452,7 @@ model Employer {
   approvalLogs EmployerApprovalLog[]
   jobs         JobPosting[]
   visaCases    VisaCase[]
+  sponsors     Sponsor[]
 
   @@unique([contactEmail])
   @@unique([contactPhone])
@@ -464,7 +461,6 @@ model Employer {
   @@index([licenseNumber])
   @@index([ownerIdNumber])
 }
-
 
 model EmployerApprovalLog {
   id         String                 @id @default(uuid())
@@ -538,6 +534,8 @@ enum VisaCaseStatus {
   EMBASSY
   LMIS
   VISA
+  CONTRACT_ISSUED
+  CONTRACT_SIGNED
   FLIGHT_BOOKED
   RETURNED
   DEPLOYED
@@ -565,16 +563,58 @@ enum VisaAttemptStatus {
   REJECTED
 }
 
+enum ContractStatus {
+  DRAFT
+  ISSUED
+  SIGNED
+  COMPLETED
+  CANCELLED
+}
+
 model Sponsor {
-  id               String  @id @default(uuid())
+  id               String   @id @default(uuid())
+  employerId       String
   fullName         String
-  sponsorIdFileUrl String?
+  iqamaNumber      String   @unique
   phone            String?
+  sponsorIdFileUrl String?
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
 
-  visaCases VisaCase[]
+  employer  Employer   @relation(fields: [employerId], references: [id], onDelete: Cascade)
+  contracts Contract[]
+
+  @@unique([employerId, iqamaNumber])
+  @@index([employerId])
+  @@index([iqamaNumber])
+}
+
+model Contract {
+  id             String         @id @default(uuid())
+  visaCaseId     String         @unique
+  contractNumber String         @unique
+  contractFileUrl String
+  signedFileUrl  String?
+  status         ContractStatus @default(DRAFT)
+
+  contractPeriodYears Int?
+  monthlySalary      Decimal?   @db.Decimal(10, 2)
+  currency           String?    @default("SAR")
+  
+  sponsorId          String?    @map("sponsor_id")
+  sponsor            Sponsor?   @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
+
+  issuedAt DateTime @default(now())
+  signedAt DateTime?
+  createdAt DateTime @default(now())
+  updatedAt DateTime @updatedAt
+
+  visaCase VisaCase @relation(fields: [visaCaseId], references: [id], onDelete: Cascade)
+
+  @@index([visaCaseId])
+  @@index([contractNumber])
+  @@index([sponsorId])
 }
 
 model VisaCase {
@@ -586,8 +626,6 @@ model VisaCase {
   status             VisaCaseStatus @default(INITIATED)
   isActive           Boolean        @default(true)
   caseManagerUserId  String
-  sponsorId          String?
-
   completedStatuses  VisaCaseStatus[] @default([])
 
   createdAt DateTime @default(now())
@@ -597,7 +635,6 @@ model VisaCase {
   partner     Employer?        @relation(fields: [partnerId], references: [id], onDelete: SetNull)
   job         JobPosting?      @relation(fields: [jobId], references: [id], onDelete: SetNull)
   caseManager User             @relation(fields: [caseManagerUserId], references: [id], onDelete: Restrict)
-  sponsor     Sponsor?         @relation(fields: [sponsorId], references: [id], onDelete: SetNull)
 
   medical        VisaMedical?
   insurance      VisaInsurance?
@@ -608,6 +645,7 @@ model VisaCase {
   visaAttempts   VisaAttempt[]
   flightBookings FlightBooking[]
   returns        VisaReturn[]
+  contracts      Contract[]
 
   @@unique([applicantId, jobId, isActive])
   @@unique([applicantId, partnerId, isActive])
@@ -617,10 +655,8 @@ model VisaCase {
   @@index([destinationCountry])
   @@index([status])
   @@index([caseManagerUserId])
-  @@index([sponsorId])
   @@index([isActive])
 }
-
 
 model VisaMedical {
   id            String               @id @default(uuid())
@@ -721,14 +757,26 @@ model VisaAttempt {
   @@index([status])
 }
 
+enum FlightBookingStatus {
+  PENDING     
+  APPROVED   
+  BOOKED      
+  CANCELLED   
+  COMPLETED  
+}
+
 model FlightBooking {
   id         String @id @default(uuid())
   visaCaseId String
 
   pnr         String
   airline     String?
+  ticketNumber String?
   departureAt DateTime?
   arrivalAt   DateTime?
+  ticketFileUrl String?
+
+  status       FlightBookingStatus @default(PENDING)
 
   createdAt DateTime @default(now())
   updatedAt DateTime @updatedAt
@@ -737,6 +785,7 @@ model FlightBooking {
 
   @@index([visaCaseId])
   @@index([pnr])
+  @@index([ticketNumber])
 }
 
 model VisaReturn {
@@ -820,7 +869,6 @@ model ApplicantExpense {
   @@index([expenseDate])
   @@index([createdBy])
 }
-
 
 model Notification {
   id         String   @id @default(uuid())

@@ -19,7 +19,9 @@ export type EmployerCreateInput = {
   createdBy: 'EMPLOYER' | 'ADMIN';
 };
 
-export type EmployerUpdateInput = Partial<Omit<EmployerCreateInput, 'registrationNumber' | 'createdBy'>> & {
+export type EmployerUpdateInput = Partial<
+  Omit<EmployerCreateInput, 'registrationNumber' | 'createdBy'>
+> & {
   status?: 'PENDING' | 'APPROVED' | 'REJECTED' | 'SUSPENDED';
   userId?: string | null;
 };
@@ -35,7 +37,9 @@ export abstract class EmployerRepository {
   abstract list(
     filters: { status?: string; country?: string },
     page: number,
-    pageSize: number
+    pageSize: number,
   ): Promise<{ items: any[]; total: number }>;
   abstract update(id: string, input: EmployerUpdateInput): Promise<any>;
+  abstract findApprovedPartners(country?: string): Promise<any[]>;
+  abstract findDistinctPartnerCountries(): Promise<string[]>;
 }

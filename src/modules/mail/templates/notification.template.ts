@@ -120,7 +120,6 @@ export function getNotificationTemplate(
         </div>
         <div class="footer">
           <p>&copy; ${new Date().getFullYear()} ${appName}. All rights reserved.</p>
-          <p>This is an automated notification, please do not reply to this email.</p>
         </div>
       </div>
     </body>

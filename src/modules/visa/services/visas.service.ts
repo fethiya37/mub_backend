@@ -32,10 +32,12 @@ import type { AdminUpsertEmbassyProcessDto } from '../dto/admin/admin-upsert-emb
 import type { AdminUpsertLmisProcessDto } from '../dto/admin/admin-upsert-lmis-process.dto';
 import type { AdminCreateVisaAttemptDto } from '../dto/admin/admin-create-visa-attempt.dto';
 import type { AdminCreateFlightBookingDto } from '../dto/admin/admin-create-flight-booking.dto';
+import type { AdminUpdateFlightBookingDto } from '../dto/admin/admin-update-flight-booking.dto';
 import type { AdminCreateVisaReturnDto } from '../dto/admin/admin-create-visa-return.dto';
 import type { AdminCloseVisaCaseDto } from '../dto/admin/admin-close-visa-case.dto';
 import type { ApplicantListVisaCasesQueryDto } from '../dto/applicant/applicant-list-visa-cases.query.dto';
 import type { EmployerListVisaCasesQueryDto } from '../dto/employer/employer-list-visa-cases.query.dto';
+import { AdminBookFlightTicketDto } from '../dto/admin/admin-book-flight-ticket.dto';
 
 @Injectable()
 export class VisasService {
@@ -479,36 +481,115 @@ export class VisasService {
       airline: dto.airline ?? null,
       departureAt: dto.departureAt ? new Date(dto.departureAt) : null,
       arrivalAt: dto.arrivalAt ? new Date(dto.arrivalAt) : null,
+      status: 'PENDING',
+    });
+
+    await this.notifyManagerForApproval(c, created);
+
+    return created;
+  }
+
+  async adminApproveFlightBooking(managerUserId: string, bookingId: string) {
+    const booking = await this.flights.findById(bookingId);
+
+    if (!booking) {
+      throw new NotFoundException('Flight booking not found');
+    }
+
+    if (booking.status !== 'PENDING') {
+      throw new BadRequestException('Booking is not pending approval');
+    }
+
+    const updated = await this.flights.update(bookingId, {
+      status: 'APPROVED',
+    });
+
+    await this.notifyStaffApproved(booking);
+
+    return updated;
+  }
+
+  async adminBookFlightTicket(
+    userId: string,
+    bookingId: string,
+    dto: AdminBookFlightTicketDto,
+    ticketFileUrl: string | null,
+  ) {
+    const booking = await this.flights.findById(bookingId);
+
+    if (!booking) {
+      throw new NotFoundException('Flight booking not found');
+    }
+
+    if (booking.status !== 'APPROVED') {
+      throw new BadRequestException(
+        'Booking must be approved before booking ticket',
+      );
+    }
+
+    const updated = await this.flights.update(bookingId, {
+      ticketNumber: dto.ticketNumber,
+      ticketFileUrl: ticketFileUrl,
+      status: 'BOOKED',
     });
 
     await this.setStatusAndMaybeComplete(
-      dto.visaCaseId,
+      booking.visaCaseId,
       this.status.statusForFlightBooking(),
       $Enums.VisaCaseStatus.FLIGHT_BOOKED,
     );
 
-    const visaCase = await this.cases.findById(dto.visaCaseId);
-
-    const departureDate = dto.departureAt
-      ? new Date(dto.departureAt).toLocaleDateString()
-      : 'TBD';
-    const airline = dto.airline || 'TBD';
-
+    const visaCase = await this.getCaseOrThrow(booking.visaCaseId);
     await this.sendNotificationToApplicant(
       visaCase.applicantId,
       NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
       'Flight Ticket Booked ✈️',
-      `Your flight has been booked. Airline: ${airline}, PNR: ${dto.pnr}, Departure: ${departureDate}`,
+      `Your flight has been booked. Ticket Number: ${dto.ticketNumber}, Airline: ${booking.airline || 'TBD'}`,
     );
 
-    await this.sendNotificationToPartner(
-      visaCase.partnerId,
-      NOTIFICATION_TYPES.VISA_STATUS_CHANGE,
-      'Flight Booked for Candidate',
-      `Flight has been booked for candidate. Airline: ${airline}, PNR: ${dto.pnr}, Departure: ${departureDate}`,
-    );
+    return updated;
+  }
 
-    return created;
+  async adminUpdateFlightBooking(
+    _adminUserId: string,
+    bookingId: string,
+    dto: AdminUpdateFlightBookingDto,
+  ) {
+    const booking = await this.flights.findById(bookingId);
+
+    if (!booking) {
+      throw new NotFoundException('Flight booking not found');
+    }
+
+    return this.flights.update(bookingId, {
+      pnr: dto.pnr,
+      airline: dto.airline,
+      ticketNumber: dto.ticketNumber,
+      departureAt: dto.departureAt ? new Date(dto.departureAt) : null,
+      arrivalAt: dto.arrivalAt ? new Date(dto.arrivalAt) : null,
+      status: dto.status as any,
+    });
+  }
+
+  async adminListFlightBookings(
+    filters: {
+      visaCaseId?: string;
+      status?: string;
+      pnr?: string;
+      ticketNumber?: string;
+    },
+    page: number,
+    pageSize: number,
+  ) {
+    return this.flights.list(filters, page, pageSize);
+  }
+
+  async adminGetFlightBooking(bookingId: string) {
+    const booking = await this.flights.findById(bookingId);
+    if (!booking) {
+      throw new NotFoundException('Flight booking not found');
+    }
+    return booking;
   }
 
   async adminCreateReturn(_adminUserId: string, dto: AdminCreateVisaReturnDto) {
@@ -667,5 +748,48 @@ export class VisasService {
       select: { id: true },
     });
     if (!u) throw new NotFoundException('User not found');
+  }
+
+  private async notifyManagerForApproval(visaCase: any, booking: any) {
+    const admins = await this.prisma.user.findMany({
+      where: {
+        userRoles: {
+          some: {
+            role: {
+              name: 'MUB_ADMIN',
+            },
+          },
+        },
+      },
+      select: { id: true },
+    });
+
+    for (const admin of admins) {
+      await this.notifications.create(
+        admin.id,
+        NOTIFICATION_TYPES.FLIGHT_BOOKING_APPROVAL,
+        'Flight Booking Requires Approval',
+        `Flight booking for applicant ${visaCase.applicant?.firstName} ${visaCase.applicant?.lastName} requires your approval. PNR: ${booking.pnr}`,
+      );
+    }
+  }
+
+  private async notifyStaffApproved(booking: any) {
+    if (booking.bookedBy) {
+      await this.notifications.create(
+        booking.bookedBy,
+        NOTIFICATION_TYPES.FLIGHT_BOOKING_APPROVED,
+        'Flight Booking Approved',
+        `Your flight booking request (PNR: ${booking.pnr}) has been approved.`,
+      );
+    }
+  }
+
+  async adminGetVisaCaseById(id: string) {
+    const visaCase = await this.cases.findById(id);
+    if (!visaCase) {
+      throw new NotFoundException('Visa case not found');
+    }
+    return visaCase;
   }
 }

@@ -1,4 +1,9 @@
-import { BadRequestException, ConflictException, Injectable, NotFoundException } from '@nestjs/common';
+import {
+  BadRequestException,
+  ConflictException,
+  Injectable,
+  NotFoundException,
+} from '@nestjs/common';
 import { EmployerRepository } from '../repositories/employer.repository';
 import { AuditService } from '../../audit/services/audit.service';
 import { EmployerRegistrationNumberService } from './employer-registration-number.service';
@@ -15,7 +20,7 @@ export class EmployersService {
     private readonly employers: EmployerRepository,
     private readonly audit: AuditService,
     private readonly regNo: EmployerRegistrationNumberService,
-    private readonly validation: EmployerValidationService
+    private readonly validation: EmployerValidationService,
   ) {}
 
   async resolveEmployerRegisterFiles(
@@ -24,13 +29,16 @@ export class EmployersService {
       logoFile?: Express.Multer.File;
       ownerIdFile?: Express.Multer.File;
       licenseFile?: Express.Multer.File;
-    }
+    },
   ): Promise<EmployerRegisterDto> {
     const next: EmployerRegisterDto = { ...dto };
 
-    if (files.logoFile) next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
-    if (files.ownerIdFile) next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
-    if (files.licenseFile) next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
+    if (files.logoFile)
+      next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
+    if (files.ownerIdFile)
+      next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
+    if (files.licenseFile)
+      next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
 
     return next;
   }
@@ -41,13 +49,16 @@ export class EmployersService {
       logoFile?: Express.Multer.File;
       ownerIdFile?: Express.Multer.File;
       licenseFile?: Express.Multer.File;
-    }
+    },
   ): Promise<AdminCreateEmployerDto> {
     const next: AdminCreateEmployerDto = { ...dto };
 
-    if (files.logoFile) next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
-    if (files.ownerIdFile) next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
-    if (files.licenseFile) next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
+    if (files.logoFile)
+      next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
+    if (files.ownerIdFile)
+      next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
+    if (files.licenseFile)
+      next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
 
     return next;
   }
@@ -59,16 +70,19 @@ export class EmployersService {
       logoFile?: Express.Multer.File;
       ownerIdFile?: Express.Multer.File;
       licenseFile?: Express.Multer.File;
-    }
+    },
   ): Promise<AdminUpdateEmployerDto> {
     const existing = await this.employers.findById(employerId);
     if (!existing) throw new NotFoundException('Employer not found');
 
     const next: AdminUpdateEmployerDto = { ...dto };
 
-    if (files.logoFile) next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
-    if (files.ownerIdFile) next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
-    if (files.licenseFile) next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
+    if (files.logoFile)
+      next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
+    if (files.ownerIdFile)
+      next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
+    if (files.licenseFile)
+      next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
 
     return next;
   }
@@ -80,16 +94,19 @@ export class EmployersService {
       logoFile?: Express.Multer.File;
       ownerIdFile?: Express.Multer.File;
       licenseFile?: Express.Multer.File;
-    }
+    },
   ): Promise<EmployerSelfUpdateDto> {
     const employer = await this.employers.findByUserId(userId);
     if (!employer) throw new NotFoundException('Employer not found for user');
 
     const next: EmployerSelfUpdateDto = { ...dto };
 
-    if (files.logoFile) next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
-    if (files.ownerIdFile) next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
-    if (files.licenseFile) next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
+    if (files.logoFile)
+      next.logoUrl = `/uploads/employers/logos/${files.logoFile.filename}`;
+    if (files.ownerIdFile)
+      next.ownerIdFileUrl = `/uploads/employers/owners/${files.ownerIdFile.filename}`;
+    if (files.licenseFile)
+      next.licenseFileUrl = `/uploads/employers/licenses/${files.licenseFile.filename}`;
 
     return next;
   }
@@ -102,7 +119,9 @@ export class EmployersService {
   async register(dto: EmployerRegisterDto) {
     await this.ensureUnique(dto);
 
-    const licenseExpiry = dto.licenseExpiry ? new Date(dto.licenseExpiry) : null;
+    const licenseExpiry = dto.licenseExpiry
+      ? new Date(dto.licenseExpiry)
+      : null;
     this.validation.ensureLicenseExpiry(licenseExpiry);
 
     const employer = await this.createWithGeneratedRegNo({
@@ -122,14 +141,14 @@ export class EmployersService {
       licenseFileUrl: this.requireLicenseFileUrl(dto.licenseFileUrl),
       licenseExpiry,
 
-      createdBy: 'EMPLOYER'
+      createdBy: 'EMPLOYER',
     });
 
     await this.audit.log({
       performedBy: null,
       action: 'EMPLOYER_REGISTERED',
       entityType: 'Employer',
-      entityId: employer.id
+      entityId: employer.id,
     });
 
     return employer;
@@ -138,7 +157,9 @@ export class EmployersService {
   async adminCreate(dto: AdminCreateEmployerDto, performedBy: string) {
     await this.ensureUnique(dto);
 
-    const licenseExpiry = dto.licenseExpiry ? new Date(dto.licenseExpiry) : null;
+    const licenseExpiry = dto.licenseExpiry
+      ? new Date(dto.licenseExpiry)
+      : null;
     this.validation.ensureLicenseExpiry(licenseExpiry);
 
     const employer = await this.createWithGeneratedRegNo({
@@ -158,20 +179,24 @@ export class EmployersService {
       licenseFileUrl: this.requireLicenseFileUrl(dto.licenseFileUrl),
       licenseExpiry,
 
-      createdBy: 'ADMIN'
+      createdBy: 'ADMIN',
     });
 
     await this.audit.log({
       performedBy,
       action: 'EMPLOYER_CREATED_BY_ADMIN',
       entityType: 'Employer',
-      entityId: employer.id
+      entityId: employer.id,
     });
 
     return employer;
   }
 
-  async adminUpdate(id: string, dto: AdminUpdateEmployerDto, performedBy: string) {
+  async adminUpdate(
+    id: string,
+    dto: AdminUpdateEmployerDto,
+    performedBy: string,
+  ) {
     const existing = await this.employers.findById(id);
     if (!existing) throw new NotFoundException('Employer not found');
 
@@ -183,7 +208,10 @@ export class EmployersService {
     const nextContactEmail = dto.contactEmail ?? existing.contactEmail;
     const nextContactPhone = dto.contactPhone ?? existing.contactPhone;
 
-    const nextOwnerIdNumber = dto.ownerIdNumber === undefined ? existing.ownerIdNumber : dto.ownerIdNumber;
+    const nextOwnerIdNumber =
+      dto.ownerIdNumber === undefined
+        ? existing.ownerIdNumber
+        : dto.ownerIdNumber;
 
     const nextLicenseExpiry =
       dto.licenseExpiry === undefined
@@ -195,25 +223,38 @@ export class EmployersService {
     this.validation.ensureLicenseExpiry(nextLicenseExpiry ?? null);
 
     if (dto.contactEmail && dto.contactEmail !== existing.contactEmail) {
-      const emailExists = await this.employers.findByContactEmail(dto.contactEmail);
-      if (emailExists) throw new ConflictException('Employer contact email already exists');
+      const emailExists = await this.employers.findByContactEmail(
+        dto.contactEmail,
+      );
+      if (emailExists)
+        throw new ConflictException('Employer contact email already exists');
     }
 
     if (dto.contactPhone && dto.contactPhone !== existing.contactPhone) {
-      const phoneExists = await this.employers.findByContactPhone(dto.contactPhone);
-      if (phoneExists) throw new ConflictException('Employer contact phone already exists');
+      const phoneExists = await this.employers.findByContactPhone(
+        dto.contactPhone,
+      );
+      if (phoneExists)
+        throw new ConflictException('Employer contact phone already exists');
     }
 
     if (dto.licenseNumber && dto.licenseNumber !== existing.licenseNumber) {
-      const licenseExists = await this.employers.findByLicenseNumber(dto.licenseNumber);
-      if (licenseExists) throw new ConflictException('Employer license number already exists');
+      const licenseExists = await this.employers.findByLicenseNumber(
+        dto.licenseNumber,
+      );
+      if (licenseExists)
+        throw new ConflictException('Employer license number already exists');
     }
 
     if (dto.ownerIdNumber !== undefined) {
       if (dto.ownerIdNumber) {
-        const ownerIdExists = await this.employers.findByOwnerIdNumber(dto.ownerIdNumber);
+        const ownerIdExists = await this.employers.findByOwnerIdNumber(
+          dto.ownerIdNumber,
+        );
         if (ownerIdExists && ownerIdExists.id !== existing.id) {
-          throw new ConflictException('Employer owner ID number already exists');
+          throw new ConflictException(
+            'Employer owner ID number already exists',
+          );
         }
       }
     }
@@ -229,24 +270,39 @@ export class EmployersService {
 
       ownerName: dto.ownerName ?? existing.ownerName,
       ownerIdNumber: nextOwnerIdNumber ?? null,
-      ownerIdFileUrl: dto.ownerIdFileUrl === undefined ? existing.ownerIdFileUrl : dto.ownerIdFileUrl,
+      ownerIdFileUrl:
+        dto.ownerIdFileUrl === undefined
+          ? existing.ownerIdFileUrl
+          : dto.ownerIdFileUrl,
 
       licenseNumber: nextLicenseNumber,
       licenseFileUrl: dto.licenseFileUrl ?? existing.licenseFileUrl,
       licenseExpiry: nextLicenseExpiry ?? null,
 
-      status: dto.status ?? existing.status
+      status: dto.status ?? existing.status,
     });
 
-    if (dto.logoUrl !== undefined && oldLogoUrl && oldLogoUrl !== updated.logoUrl) {
+    if (
+      dto.logoUrl !== undefined &&
+      oldLogoUrl &&
+      oldLogoUrl !== updated.logoUrl
+    ) {
       await safeDeleteUploadByRelativePath(oldLogoUrl);
     }
 
-    if (dto.ownerIdFileUrl !== undefined && oldOwnerIdFileUrl && oldOwnerIdFileUrl !== updated.ownerIdFileUrl) {
+    if (
+      dto.ownerIdFileUrl !== undefined &&
+      oldOwnerIdFileUrl &&
+      oldOwnerIdFileUrl !== updated.ownerIdFileUrl
+    ) {
       await safeDeleteUploadByRelativePath(oldOwnerIdFileUrl);
     }
 
-    if (dto.licenseFileUrl !== undefined && oldLicenseFileUrl && oldLicenseFileUrl !== updated.licenseFileUrl) {
+    if (
+      dto.licenseFileUrl !== undefined &&
+      oldLicenseFileUrl &&
+      oldLicenseFileUrl !== updated.licenseFileUrl
+    ) {
       await safeDeleteUploadByRelativePath(oldLicenseFileUrl);
     }
 
@@ -254,7 +310,7 @@ export class EmployersService {
       performedBy,
       action: 'EMPLOYER_UPDATED_BY_ADMIN',
       entityType: 'Employer',
-      entityId: id
+      entityId: id,
     });
 
     return updated;
@@ -272,7 +328,10 @@ export class EmployersService {
     const nextContactEmail = dto.contactEmail ?? employer.contactEmail;
     const nextContactPhone = dto.contactPhone ?? employer.contactPhone;
 
-    const nextOwnerIdNumber = dto.ownerIdNumber === undefined ? employer.ownerIdNumber : dto.ownerIdNumber;
+    const nextOwnerIdNumber =
+      dto.ownerIdNumber === undefined
+        ? employer.ownerIdNumber
+        : dto.ownerIdNumber;
 
     const nextLicenseExpiry =
       dto.licenseExpiry === undefined
@@ -284,21 +343,27 @@ export class EmployersService {
     this.validation.ensureLicenseExpiry(nextLicenseExpiry ?? null);
 
     if (dto.contactEmail && dto.contactEmail !== employer.contactEmail) {
-      const emailExists = await this.employers.findByContactEmail(dto.contactEmail);
+      const emailExists = await this.employers.findByContactEmail(
+        dto.contactEmail,
+      );
       if (emailExists && emailExists.id !== employer.id) {
         throw new ConflictException('Employer contact email already exists');
       }
     }
 
     if (dto.contactPhone && dto.contactPhone !== employer.contactPhone) {
-      const phoneExists = await this.employers.findByContactPhone(dto.contactPhone);
+      const phoneExists = await this.employers.findByContactPhone(
+        dto.contactPhone,
+      );
       if (phoneExists && phoneExists.id !== employer.id) {
         throw new ConflictException('Employer contact phone already exists');
       }
     }
 
     if (dto.licenseNumber && dto.licenseNumber !== employer.licenseNumber) {
-      const licenseExists = await this.employers.findByLicenseNumber(dto.licenseNumber);
+      const licenseExists = await this.employers.findByLicenseNumber(
+        dto.licenseNumber,
+      );
       if (licenseExists && licenseExists.id !== employer.id) {
         throw new ConflictException('Employer license number already exists');
       }
@@ -306,9 +371,13 @@ export class EmployersService {
 
     if (dto.ownerIdNumber !== undefined) {
       if (dto.ownerIdNumber) {
-        const ownerIdExists = await this.employers.findByOwnerIdNumber(dto.ownerIdNumber);
+        const ownerIdExists = await this.employers.findByOwnerIdNumber(
+          dto.ownerIdNumber,
+        );
         if (ownerIdExists && ownerIdExists.id !== employer.id) {
-          throw new ConflictException('Employer owner ID number already exists');
+          throw new ConflictException(
+            'Employer owner ID number already exists',
+          );
         }
       }
     }
@@ -324,22 +393,37 @@ export class EmployersService {
 
       ownerName: dto.ownerName ?? employer.ownerName,
       ownerIdNumber: nextOwnerIdNumber ?? null,
-      ownerIdFileUrl: dto.ownerIdFileUrl === undefined ? employer.ownerIdFileUrl : dto.ownerIdFileUrl,
+      ownerIdFileUrl:
+        dto.ownerIdFileUrl === undefined
+          ? employer.ownerIdFileUrl
+          : dto.ownerIdFileUrl,
 
       licenseNumber: nextLicenseNumber,
       licenseFileUrl: dto.licenseFileUrl ?? employer.licenseFileUrl,
-      licenseExpiry: nextLicenseExpiry ?? null
+      licenseExpiry: nextLicenseExpiry ?? null,
     });
 
-    if (dto.logoUrl !== undefined && oldLogoUrl && oldLogoUrl !== updated.logoUrl) {
+    if (
+      dto.logoUrl !== undefined &&
+      oldLogoUrl &&
+      oldLogoUrl !== updated.logoUrl
+    ) {
       await safeDeleteUploadByRelativePath(oldLogoUrl);
     }
 
-    if (dto.ownerIdFileUrl !== undefined && oldOwnerIdFileUrl && oldOwnerIdFileUrl !== updated.ownerIdFileUrl) {
+    if (
+      dto.ownerIdFileUrl !== undefined &&
+      oldOwnerIdFileUrl &&
+      oldOwnerIdFileUrl !== updated.ownerIdFileUrl
+    ) {
       await safeDeleteUploadByRelativePath(oldOwnerIdFileUrl);
     }
 
-    if (dto.licenseFileUrl !== undefined && oldLicenseFileUrl && oldLicenseFileUrl !== updated.licenseFileUrl) {
+    if (
+      dto.licenseFileUrl !== undefined &&
+      oldLicenseFileUrl &&
+      oldLicenseFileUrl !== updated.licenseFileUrl
+    ) {
       await safeDeleteUploadByRelativePath(oldLicenseFileUrl);
     }
 
@@ -347,13 +431,17 @@ export class EmployersService {
       performedBy: userId,
       action: 'EMPLOYER_SELF_UPDATED',
       entityType: 'Employer',
-      entityId: employer.id
+      entityId: employer.id,
     });
 
     return updated;
   }
 
-  list(filters: { status?: string; country?: string }, page: number, pageSize: number) {
+  list(
+    filters: { status?: string; country?: string },
+    page: number,
+    pageSize: number,
+  ) {
     return this.employers.list(filters, page, pageSize);
   }
 
@@ -364,18 +452,30 @@ export class EmployersService {
   }
 
   private async ensureUnique(dto: EmployerRegisterDto) {
-    const emailExists = await this.employers.findByContactEmail(dto.contactEmail);
-    if (emailExists) throw new ConflictException('Employer contact email already exists');
+    const emailExists = await this.employers.findByContactEmail(
+      dto.contactEmail,
+    );
+    if (emailExists)
+      throw new ConflictException('Employer contact email already exists');
 
-    const phoneExists = await this.employers.findByContactPhone(dto.contactPhone);
-    if (phoneExists) throw new ConflictException('Employer contact phone already exists');
+    const phoneExists = await this.employers.findByContactPhone(
+      dto.contactPhone,
+    );
+    if (phoneExists)
+      throw new ConflictException('Employer contact phone already exists');
 
-    const licenseExists = await this.employers.findByLicenseNumber(dto.licenseNumber);
-    if (licenseExists) throw new ConflictException('Employer license number already exists');
+    const licenseExists = await this.employers.findByLicenseNumber(
+      dto.licenseNumber,
+    );
+    if (licenseExists)
+      throw new ConflictException('Employer license number already exists');
 
     if (dto.ownerIdNumber) {
-      const ownerIdExists = await this.employers.findByOwnerIdNumber(dto.ownerIdNumber);
-      if (ownerIdExists) throw new ConflictException('Employer owner ID number already exists');
+      const ownerIdExists = await this.employers.findByOwnerIdNumber(
+        dto.ownerIdNumber,
+      );
+      if (ownerIdExists)
+        throw new ConflictException('Employer owner ID number already exists');
     }
   }
 
@@ -406,15 +506,33 @@ export class EmployersService {
       try {
         return await this.employers.create({
           ...input,
-          registrationNumber
+          registrationNumber,
         });
       } catch (e: any) {
         const isUniqueViolation = e?.code === 'P2002';
         if (!isUniqueViolation) throw e;
-        if (i === maxAttempts - 1) throw new ConflictException('Failed to generate unique registration number');
+        if (i === maxAttempts - 1)
+          throw new ConflictException(
+            'Failed to generate unique registration number',
+          );
       }
     }
 
     throw new ConflictException('Failed to create employer');
+  }
+
+  async getAvailablePartners(country?: string) {
+    return this.employers.findApprovedPartners(country);
+  }
+
+  async getPartnerCountries() {
+    return this.employers.findDistinctPartnerCountries();
+  }
+
+  async getEmployerByUserId(userId: string) {
+    const employer = await this.employers.findByUserId(userId);
+    if (!employer)
+      throw new NotFoundException('Employer not found for this user');
+    return employer;
   }
 }

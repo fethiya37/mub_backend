@@ -274,7 +274,25 @@ src
     │   └── templates
     │       ├── account-setup.template.ts
     │       ├── email-verify.template.ts
+    │       ├── notification.template.ts
     │       └── password-reset.template.ts
+    ├── notifications
+    │   ├── constants
+    │   │   └── notification-types.constant.ts
+    │   ├── dto
+    │   │   └── create-notification.dto.ts
+    │   ├── gateways
+    │   │   └── notification.gateway.ts
+    │   ├── notifications.module.ts
+    │   ├── presentation
+    │   │   └── notifications.controller.ts
+    │   ├── prisma
+    │   │   ├── notification-preference.prisma-repository.ts
+    │   │   └── notification.prisma-repository.ts
+    │   ├── repositories
+    │   │   └── notification.repository.ts
+    │   └── services
+    │       └── notifications.service.ts
     ├── rbac
     │   ├── presentation
     │   │   ├── admin-permissions.controller.ts
@@ -396,4 +414,4 @@ src
         └── visa.module.ts
 /f  [error opening dir]
 
-105 directories, 291 files
+113 directories, 301 files

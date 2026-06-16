@@ -17,12 +17,12 @@ export class AdminCreateFlightBookingDto {
   @IsString()
   airline?: string;
 
-  @ApiPropertyOptional({ example: '2026-03-01T10:00:00.000Z' })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   departureAt?: string;
 
-  @ApiPropertyOptional({ example: '2026-03-01T18:00:00.000Z' })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   arrivalAt?: string;

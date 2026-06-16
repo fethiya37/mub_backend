@@ -20,6 +20,7 @@ import { ExpensesModule } from './modules/expenses/expenses.module';
 import { JobApplicationsModule } from './modules/job-applications/job-applications.module';
 import { ReportsModule } from './modules/reports/reports.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
+import { ContractModule } from './modules/contract/contract.module';
 
 @Module({
   imports: [
@@ -32,6 +33,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     ThrottlerModule.forRoot(throttleConfig()),
     PrismaModule,
     AuditModule,
+    NotificationsModule,
     RbacModule,
     UsersModule,
     AuthModule,
@@ -44,7 +46,7 @@ import { NotificationsModule } from './modules/notifications/notifications.modul
     JobApplicationsModule,
     LocalAgenciesModule,
     ReportsModule,
-    NotificationsModule,
+    ContractModule,
   ],
   providers: [...appGuards],
 })

@@ -53,13 +53,17 @@ export class NotificationsService {
         select: { email: true, fullName: true },
       });
 
-      if (user?.email) {
+      if (user?.email && user.email.trim().length > 0) {
         await this.mailService.sendNotificationEmail(
           user.email,
           user.fullName || 'User',
           title,
           message,
           type,
+        );
+      } else {
+        this.logger.warn(
+          `User ${userId} has no email address, skipping email notification`,
         );
       }
     }

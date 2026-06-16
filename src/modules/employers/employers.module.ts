@@ -5,6 +5,8 @@ import { AdminEmployersController } from './presentation/admin-employers.control
 import { EmployerJobsController } from './presentation/employer-jobs.controller';
 import { PublicJobsController } from './presentation/public-jobs.controller';
 import { EmployerProfileController } from './presentation/employer-profile.controller';
+import { PublicPartnersController } from './presentation/public-partners.controller';
+import { AdminJobsController } from './presentation/admin-jobs.controller';
 import { EmployersService } from './services/employers.service';
 import { EmployerApprovalService } from './services/employer-approval.service';
 import { EmployerAccessService } from './services/employer-access.service';
@@ -21,7 +23,7 @@ import { JobPostingPrismaRepository } from './prisma/job-posting.prisma-reposito
 import { AuditModule } from '../audit/audit.module';
 import { AuthModule } from '../auth/auth.module';
 import { RbacModule } from '../rbac/rbac.module';
-import { AdminJobsController } from './presentation/admin-jobs.controller';
+import { EmployerProfileSelfController } from './presentation/employer-profile-self.controller';
 
 @Module({
   imports: [AuditModule, AuthModule, RbacModule],
@@ -31,7 +33,9 @@ import { AdminJobsController } from './presentation/admin-jobs.controller';
     EmployerJobsController,
     PublicJobsController,
     EmployerProfileController,
-    AdminJobsController
+    AdminJobsController,
+    PublicPartnersController,
+    EmployerProfileSelfController,
   ],
   providers: [
     PrismaService,
@@ -43,9 +47,17 @@ import { AdminJobsController } from './presentation/admin-jobs.controller';
     EmployerRegistrationNumberService,
     EmployerValidationService,
     { provide: EmployerRepository, useClass: EmployerPrismaRepository },
-    { provide: EmployerApprovalLogRepository, useClass: EmployerApprovalLogPrismaRepository },
-    { provide: JobPostingRepository, useClass: JobPostingPrismaRepository }
+    {
+      provide: EmployerApprovalLogRepository,
+      useClass: EmployerApprovalLogPrismaRepository,
+    },
+    { provide: JobPostingRepository, useClass: JobPostingPrismaRepository },
   ],
-  exports: [JobPostingRepository, EmployerAccessService, EmployerRepository]
+  exports: [
+    JobPostingRepository,
+    EmployerAccessService,
+    EmployerRepository,
+    EmployersService,
+  ],
 })
 export class EmployersModule {}

@@ -2,7 +2,6 @@ import { ValidationPipe } from '@nestjs/common';
 import { NestFactory } from '@nestjs/core';
 import { DocumentBuilder, SwaggerModule } from '@nestjs/swagger';
 import { AppModule } from './app.module';
-
 import { NestExpressApplication } from '@nestjs/platform-express';
 import { existsSync, mkdirSync } from 'fs';
 import { join } from 'path';
@@ -53,15 +52,12 @@ async function bootstrap() {
   const document = SwaggerModule.createDocument(app, config);
   SwaggerModule.setup('api/docs', app, document);
 
-  // const port = Number(process.env.PORT ?? process.env.APP_PORT ?? 3000);
-  // await app.listen(port, '0.0.0.0');
-
   const port = Number(process.env.PORT ?? process.env.APP_PORT ?? 3000);
-  const host = '0.0.0.0';
-  const baseUrl = process.env.APP_BASE_URL || `http://localhost:${port}`;
+  const host = process.env.HOST ?? '0.0.0.0';
 
   await app.listen(port, host);
 
+  const baseUrl = process.env.APP_BASE_URL || `http://${host}:${port}`;
   console.log(`✅ Application is running on: ${baseUrl}`);
   console.log(`📚 Swagger UI available at: ${baseUrl}/api/docs`);
   console.log(

@@ -1,23 +1,30 @@
 import { ApiProperty, ApiPropertyOptional } from '@nestjs/swagger';
-import { IsOptional, IsString, IsUrl, MinLength } from 'class-validator';
+import { IsString, IsOptional, IsUUID } from 'class-validator';
 
 export class AdminUpsertSponsorDto {
-  @ApiProperty({ example: 'John Doe' })
+  @ApiProperty()
   @IsString()
-  @MinLength(2)
   fullName!: string;
+
+  @ApiProperty()
+  @IsString()
+  iqamaNumber!: string;
+
+  @ApiProperty()
+  @IsUUID()
+  employerId!: string;
+
+  @ApiPropertyOptional()
+  @IsOptional()
+  @IsString()
+  phone?: string;
 
   @ApiPropertyOptional({ type: 'string', format: 'binary' })
   @IsOptional()
   sponsorIdFile?: any;
 
-  @ApiPropertyOptional({ example: '/uploads/visa/sponsors/id.jpg' })
+  @ApiPropertyOptional()
   @IsOptional()
   @IsString()
   sponsorIdFileUrl?: string;
-
-  @ApiPropertyOptional({ example: '+2519xxxxxxx' })
-  @IsOptional()
-  @IsString()
-  phone?: string;
 }

@@ -14,10 +14,19 @@ export class FlightBookingResponseDto {
   airline?: string | null;
 
   @ApiPropertyOptional()
+  ticketNumber?: string | null;
+
+  @ApiPropertyOptional()
   departureAt?: string | null;
 
   @ApiPropertyOptional()
   arrivalAt?: string | null;
+
+  @ApiPropertyOptional()
+  ticketFileUrl?: string | null;
+
+  @ApiProperty()
+  status!: string;
 
   @ApiProperty()
   createdAt!: string;

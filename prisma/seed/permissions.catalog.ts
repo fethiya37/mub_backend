@@ -87,6 +87,11 @@ export const PERMISSIONS = [
   'COMPANY_EXPENSE_TYPE_MANAGE',
   'COMPANY_EXPENSE_MANAGE',
 
+  'CONTRACT_CREATE',
+  'CONTRACT_VIEW',
+  'CONTRACT_UPDATE',
+  'CONTRACT_DELETE',
+
   'REPORT_VIEW',
   'REPORT_ANALYTICS_VIEW',
 ] as const;
@@ -147,6 +152,11 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'SKILL_VIEW',
 
     'VISA_VIEW',
+
+    'CONTRACT_CREATE',
+    'CONTRACT_VIEW',
+    'CONTRACT_UPDATE',
+    'CONTRACT_DELETE',
   ],
 
   [ROLES.APPLICANT]: [
@@ -158,6 +168,7 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICANT_SELF_STATUS_TRACK',
 
     'SKILL_VIEW',
+    'CONTRACT_VIEW',
 
     'JOB_VIEW',
 
@@ -186,6 +197,11 @@ export const ROLE_PERMISSIONS: Record<RoleCode, readonly PermissionCode[]> = {
     'APPLICATION_MANAGE',
 
     'REPORT_VIEW',
+
+    'CONTRACT_CREATE',
+    'CONTRACT_VIEW',
+    'CONTRACT_UPDATE',
+    'CONTRACT_DELETE',
   ],
 
   [ROLES.FINANCE_OFFICER]: [
