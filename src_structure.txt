@@ -123,6 +123,22 @@ src
     │   │   └── token.service.ts
     │   └── strategies
     │       └── jwt.strategy.ts
+    ├── contract
+    │   ├── contract.module.ts
+    │   ├── dto
+    │   │   ├── admin
+    │   │   │   ├── create-contract.dto.ts
+    │   │   │   └── update-contract.dto.ts
+    │   │   └── shared
+    │   │       └── contract-response.dto.ts
+    │   ├── presentation
+    │   │   └── admin-contracts.controller.ts
+    │   ├── prisma
+    │   │   └── contract.prisma-repository.ts
+    │   ├── repositories
+    │   │   └── contract.repository.ts
+    │   └── services
+    │       └── contract.service.ts
     ├── employers
     │   ├── dto
     │   │   ├── admin
@@ -148,8 +164,10 @@ src
     │   │   ├── admin-jobs.controller.ts
     │   │   ├── employer-jobs.controller.ts
     │   │   ├── employer-profile.controller.ts
+    │   │   ├── employer-profile-self.controller.ts
     │   │   ├── employers-public.controller.ts
-    │   │   └── public-jobs.controller.ts
+    │   │   ├── public-jobs.controller.ts
+    │   │   └── public-partners.controller.ts
     │   ├── prisma
     │   │   ├── employer-approval-log.prisma-repository.ts
     │   │   ├── employer.prisma-repository.ts
@@ -346,6 +364,7 @@ src
         ├── dto
         │   ├── admin
         │   │   ├── admin-assign-case-manager.dto.ts
+        │   │   ├── admin-book-flight-ticket.dto.ts
         │   │   ├── admin-close-visa-case.dto.ts
         │   │   ├── admin-create-flight-booking.dto.ts
         │   │   ├── admin-create-visa-attempt.dto.ts
@@ -354,6 +373,7 @@ src
         │   │   ├── admin-link-sponsor.dto.ts
         │   │   ├── admin-list-visa-cases.query.dto.ts
         │   │   ├── admin-set-fingerprint.dto.ts
+        │   │   ├── admin-update-flight-booking.dto.ts
         │   │   ├── admin-upsert-embassy-process.dto.ts
         │   │   ├── admin-upsert-insurance.dto.ts
         │   │   ├── admin-upsert-lmis-process.dto.ts
@@ -414,4 +434,4 @@ src
         └── visa.module.ts
 /f  [error opening dir]
 
-113 directories, 301 files
+121 directories, 313 files

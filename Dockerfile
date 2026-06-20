@@ -8,7 +8,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 COPY package*.json ./
 COPY prisma ./prisma
 
-RUN npm ci
+RUN npm config set fetch-timeout 600000 && npm ci --no-audit --no-fund
 RUN npx prisma generate
 
 COPY . .
@@ -22,7 +22,7 @@ ENV PUPPETEER_SKIP_DOWNLOAD=true
 COPY package*.json ./
 COPY prisma ./prisma
 
-RUN npm ci --omit=dev
+RUN npm config set fetch-timeout 600000 && npm ci --omit=dev --no-audit --no-fund
 
 COPY --from=builder /app/node_modules/.prisma /app/node_modules/.prisma
 COPY --from=builder /app/node_modules/@prisma /app/node_modules/@prisma
