@@ -131,12 +131,13 @@ export class TelegramBotService {
       }
     });
 
-    try {
-      await this.bot.launch();
-      this.logger.log('Telegram bot started (polling)');
-    } catch (error: any) {
-      this.logger.error(`Failed to launch bot: ${error.message}`);
-    }
+    // 🔥 Launch bot without awaiting – fire and forget
+    this.bot
+      .launch()
+      .then(() => this.logger.log('Telegram bot started (polling)'))
+      .catch((err: any) =>
+        this.logger.error(`Failed to launch bot: ${err.message}`),
+      );
   }
 
   private async askQuestion(ctx: Context, userId: string, steps: any[]) {

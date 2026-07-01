@@ -21,7 +21,7 @@ import { JobApplicationsModule } from './modules/job-applications/job-applicatio
 import { ReportsModule } from './modules/reports/reports.module';
 import { NotificationsModule } from './modules/notifications/notifications.module';
 import { ContractModule } from './modules/contract/contract.module';
-// import { TelegramBotModule } from './modules/telegram-bot/telegram-bot.module';
+import { TelegramBotModule } from './modules/telegram-bot/telegram-bot.module';
 
 @Module({
   imports: [
@@ -32,7 +32,6 @@ import { ContractModule } from './modules/contract/contract.module';
     }),
 
     ThrottlerModule.forRoot(throttleConfig()),
-    // TelegramBotModule,
     PrismaModule,
     AuditModule,
     NotificationsModule,
@@ -49,6 +48,7 @@ import { ContractModule } from './modules/contract/contract.module';
     LocalAgenciesModule,
     ReportsModule,
     ContractModule,
+    TelegramBotModule,
   ],
   providers: [...appGuards],
 })

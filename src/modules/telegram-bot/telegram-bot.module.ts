@@ -9,7 +9,12 @@ import { TelegramBotService } from './telegram-bot.service';
 })
 export class TelegramBotModule implements OnApplicationBootstrap {
   constructor(private readonly botService: TelegramBotService) {}
+
   async onApplicationBootstrap() {
-    await this.botService.init();
+    // Start bot without blocking the app startup
+    // We do not await, so the app finishes bootstrapping immediately.
+    this.botService.init().catch((err) => {
+      console.error('Telegram bot initialization error:', err);
+    });
   }
 }
